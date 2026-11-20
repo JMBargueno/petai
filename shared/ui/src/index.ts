@@ -28,3 +28,10 @@ export { default as TileButton } from './TileButton.svelte';
 export { default as Ico } from './Ico.svelte';
 export { focusTrap } from './focusTrap';
 export { emitUiFeedback, onUiFeedback, type UiFeedback } from './feedback';
+
+// Piezas de dominio: pantallas enteras que solo pintan. Reciben el estado por props y avisan de lo
+// que el jugador quiere hacer; quien las usa (el contenedor de cada app) habla con el núcleo.
+export { default as BackpackView } from './BackpackView.svelte';
+export { default as ItemIcon } from './ItemIcon.svelte';
+export { default as ShopView } from './ShopView.svelte';
+export { ITEM_ICON_SIZE, itemIcon } from './items';

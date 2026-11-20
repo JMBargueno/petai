@@ -76,8 +76,8 @@ se desvía del plan, se anota en «Desviaciones» al final.
 - ✅ 4.1 `main.rs` → `lib.rs` con `mobile_entry_point`; lo de escritorio en `desktop.rs` bajo `cfg(desktop)` y un shell mínimo en `mobile.rs`
 - 🟡 4.2 `tauri android init` hecho y `gen/android` versionado; la app compila, se instala y funciona en el emulador. Falta `tauri ios init` (necesita un Mac)
 - 🟡 4.3 `tauri.android.conf.json` y capacidades por plataforma (`capabilities/mobile.json`) hechos; falta `tauri.ios.conf.json`
-- 🟡 4.4 `shared/ui` (`@pockai/ui`): tokens, fuentes, estilos y los 20 componentes del kit del escritorio, ya usados por el escritorio y por Android. Faltan las piezas de dominio (se sacan según se porte cada pantalla)
-- 🟡 4.5 `apps/android`: primera UI Svelte (entrar, mascota, cuidar, alimentar, eclosionar, salir). Probada sobre el núcleo alojándola en el shell de escritorio; no en un dispositivo
+- 🟡 4.4 `shared/ui` (`@pockai/ui`): tokens, fuentes, estilos, los 20 componentes del kit y las primeras pantallas de dominio (Tienda, Mochila, icono de objeto), usados por el escritorio y por Android. Faltan Eclosión (depende del motor de sprites del escritorio), Inicio y Cuenta
+- 🟡 4.5 `apps/android`: UI Svelte con pestañas (Mascota, Mochila, Tienda) hecha con `@pockai/ui`. Probada en el emulador. Faltan el resto de pantallas del juego
 - ⬜ 4.6 `apps/ios`: UI Svelte
 - 🟡 4.7 Sesión en móvil: iOS usa el Keychain (crate `keyring`); Android, un fichero privado de la app (`FileStore`). Falta cifrarlo con el Keystore en un plugin nativo
 - ⬜ 4.8 `tauri-plugin-pockai-bgsync`: WorkManager / BGAppRefreshTask + avisos de cuidado
@@ -275,3 +275,18 @@ El escritorio conserva sus rutas de siempre (`components/ui`, `components/Ico.sv
 
 Verificado: 438 tests y compilación del escritorio; el escritorio en modo demo se ve igual que antes;
 la app de Android en el emulador con el kit (inicio de sesión, mascota, alimentar, salir).
+
+### Pantallas de dominio compartidas (2026-11-20)
+
+`ShopView`, `BackpackView` e `ItemIcon` pasan del escritorio a `@pockai/ui`. Ya eran
+presentacionales (estado por props, lo que pide el jugador por eventos), así que se movieron sin
+reescribirlas. Cada app pone el contenedor: el escritorio en `ControlPanel.svelte`, Android en
+`apps/android/src/App.svelte`, y ambos atienden los mismos eventos (`buy`, `use`, `go`) pidiendo
+la acción al núcleo. La navegación (pestañas de Android, panel del escritorio) no se comparte.
+
+Cómo decidir si una pantalla del escritorio puede compartirse: si solo importa del kit y de otros
+presentacionales, se mueve tal cual. Si importa `lib/api`, `lib/sprites`, `lib/audio` o algo del
+escritorio (arrastre del hábitat, ventana), antes hay que partirla.
+
+Verificado: Tienda del escritorio en modo demo (iconos, compra, saldo); en el emulador de Android,
+comprar en la Tienda (1120 → 1110 monedas, manzanas 5 → 6) y usar un objeto de la Mochila (6 → 5).

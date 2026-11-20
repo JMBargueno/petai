@@ -5,8 +5,12 @@
    * Las prendas no salen aquí: se ponen en el Armario.
    */
   import { createEventDispatcher } from 'svelte';
-  import ItemIcon from '../ItemIcon.svelte';
-  import { Badge, Button, EmptyState, ListRow, SectionHeader } from '../ui';
+  import ItemIcon from './ItemIcon.svelte';
+  import Badge from './Badge.svelte';
+  import Button from './Button.svelte';
+  import EmptyState from './EmptyState.svelte';
+  import ListRow from './ListRow.svelte';
+  import SectionHeader from './SectionHeader.svelte';
 
   export let pet: any = null;
   export let inventory: any[] = [];

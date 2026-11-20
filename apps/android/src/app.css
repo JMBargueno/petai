@@ -89,3 +89,46 @@ label {
 .input {
   font-size: var(--text-body-lg);
 }
+
+/* Pantalla de la pestaña activa: ocupa el hueco y deja sitio a la barra de pestañas. */
+.screen {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  flex: 1;
+  padding-bottom: 84px;
+}
+
+/* Barra de pestañas: la navegación es de cada app, no de la biblioteca. */
+nav {
+  position: fixed;
+  inset: auto 0 0 0;
+  display: flex;
+  justify-content: space-around;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4) max(var(--space-2), env(safe-area-inset-bottom));
+  background: var(--surface);
+  border-top: 1px solid var(--line-soft);
+}
+
+nav button {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-height: 56px;
+  padding: var(--space-2);
+  font: inherit;
+  font-size: var(--text-caption);
+  font-weight: 600;
+  color: var(--ink-muted);
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-md);
+}
+
+nav button.active {
+  color: var(--accent-ink);
+  background: var(--surface-2);
+}

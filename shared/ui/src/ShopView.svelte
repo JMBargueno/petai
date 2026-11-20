@@ -1,8 +1,12 @@
 <script lang="ts">
   /** Tienda › Tienda: catálogo de objetos que se compran con monedas. */
   import { createEventDispatcher } from 'svelte';
-  import ItemIcon from '../ItemIcon.svelte';
-  import { Button, CurrencyPill, EmptyState, ListRow, SectionHeader } from '../ui';
+  import ItemIcon from './ItemIcon.svelte';
+  import Button from './Button.svelte';
+  import CurrencyPill from './CurrencyPill.svelte';
+  import EmptyState from './EmptyState.svelte';
+  import ListRow from './ListRow.svelte';
+  import SectionHeader from './SectionHeader.svelte';
 
   export let shopItems: any[] = [];
   /** Inventario actual, para decir cuántos tienes ya de cada objeto. */
