@@ -82,7 +82,7 @@ export class AgentService {
    * El cliente no decide: aquí se aplica la regla de desbloqueo con los datos del servidor.
    */
   private async checkPetState(userId: string, petId: string, tool: string, args: any): Promise<string | null> {
-    if (!['toggle_desktop_skill', 'start_pomodoro', 'stop_pomodoro', 'set_in_habitat'].includes(tool)) return null;
+    if (!['toggle_desktop_skill', 'start_pomodoro', 'stop_pomodoro', 'play_ambient', 'stop_ambient', 'set_in_habitat'].includes(tool)) return null;
     const pet: any = await this.petsService.getPetById(userId, petId);
     switch (tool) {
       case 'toggle_desktop_skill': {
@@ -102,6 +102,12 @@ export class AgentService {
       case 'stop_pomodoro': {
         const st = skillStateOf(getDesktopSkill('pomodoro_companion')!, pet.desktopSkills, pet);
         return st.state === 'active' ? null : 'La habilidad Compañero Pomodoro no está activa';
+      }
+      case 'play_ambient':
+      case 'stop_ambient': {
+        const st = skillStateOf(getDesktopSkill('ambient_mixer')!, pet.desktopSkills, pet);
+        if (st.state === 'locked') return 'Aún no tienes el reproductor MP3: se compra en el hábitat';
+        return st.state === 'active' ? null : 'La habilidad Música ambiente está apagada';
       }
       case 'set_in_habitat':
         return !!pet.inHabitat === args.in_habitat

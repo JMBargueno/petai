@@ -2,7 +2,7 @@
 // las valida; aquí se ejecutan DESPUÉS de que el usuario pulse "Confirmar" en la tarjeta.
 
 /** Herramientas de escritorio que esta app declara soportar al servidor. */
-export const CLIENT_TOOLS = ['open_url', 'read_clipboard', 'toggle_desktop_skill', 'start_pomodoro', 'stop_pomodoro'] as const;
+export const CLIENT_TOOLS = ['open_url', 'read_clipboard', 'toggle_desktop_skill', 'start_pomodoro', 'stop_pomodoro', 'play_ambient', 'stop_ambient'] as const;
 
 const BLOCKED = /^(localhost|.*\.(localhost|local|internal|lan))$/i;
 const PRIVATE_V4 = /^(127\.|10\.|192\.168\.|169\.254\.|172\.(1[6-9]|2\d|3[01])\.|0\.)/;

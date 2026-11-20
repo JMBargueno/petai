@@ -5,6 +5,8 @@
  */
 import type { ComponentType } from 'svelte';
 import PomodoroClock from '../../components/ether/PomodoroClock.svelte';
+import Mp3Player from '../../components/ether/Mp3Player.svelte';
+import { mp3PlayerLine } from './mp3Player';
 import type { ErrandKind, EtherWant } from './director';
 import { pomodoroClockLine } from './pomodoroClock';
 
@@ -20,4 +22,6 @@ export interface EtherKind {
 
 export const ETHER_KINDS: Record<string, EtherKind> = {
   'pomodoro-clock': { component: PomodoroClock, w: 96, h: 108, skill: 'pomodoro_companion', line: pomodoroClockLine },
+  // Reproductor MP3 (spec 42): sale del Éter mientras suena la música del mezclador
+  'mp3-player': { component: Mp3Player, w: 72, h: 100, skill: 'ambient_mixer', line: mp3PlayerLine },
 };

@@ -497,6 +497,50 @@ const FURNITURE: FurnitureArt[] = [
       );
     },
   },
+  {
+    // Reproductor MP3 (spec 42), de cualquier sala. Pasado a mano del concepto de Nano Banana:
+    // reproductor de pie en una base-altavoz de madera con dos conos y auriculares en el suelo.
+    id: 'mp3',
+    footprint: [1, 1],
+    height: 58,
+    draw(p) {
+      const PEARL = '#eeeaf6';
+      const SPEAKER = '#4b3d8f';
+      const WOOD_MP3 = '#e0a05a';
+      /** Cono de altavoz en la cara +u (plano u fijo), centrado en (v, z). */
+      const sideCone = (u: number, v: number, z: number, rv: number, rz: number, fill: string, sw: number) => {
+        const pts: P3[] = [];
+        for (let k = 0; k < 24; k++) {
+          const t = (k / 24) * Math.PI * 2;
+          pts.push([u, v + rv * Math.cos(t), z + rz * Math.sin(t)]);
+        }
+        shape(p, pts, fill, sw);
+      };
+      p.footprintShadow(1, 1);
+      // Base-altavoz de madera con zócalo oscuro
+      p.box(0.1, 0.1, 0.92, 0.92, 0, 3, WOOD_DARK);
+      p.box(0.08, 0.08, 0.9, 0.9, 3, 14, WOOD_MP3);
+      // Conos: uno en cada cara visible
+      wallDisc(p, 0.3, 0.9, 8.5, 0.14, 4.4, SPEAKER, 1.8);
+      wallDisc(p, 0.3, 0.9, 8.5, 0.05, 1.7, shade(SPEAKER, 0.4), 1.2);
+      sideCone(0.9, 0.62, 8.5, 0.14, 4.4, shade(SPEAKER, -0.1), 1.8);
+      sideCone(0.9, 0.62, 8.5, 0.05, 1.7, shade(SPEAKER, 0.3), 1.2);
+      // Reproductor de pie, encajado al fondo de la base y de cara al frente
+      p.box(0.14, 0.24, 0.86, 0.42, 14, 44, PEARL);
+      // Pantalla violeta oscura con ecualizador menta
+      shape(p, [[0.2, 0.42, 30], [0.8, 0.42, 30], [0.8, 0.42, 41], [0.2, 0.42, 41]], NIGHT, 1.6);
+      [3, 6, 4, 7, 5].forEach((h, k) => line(p, [0.27 + k * 0.115, 0.42, 32], [0.27 + k * 0.115, 0.42, 32 + h], LEAF, 1.6));
+      // Rueda de control gris con botón violeta
+      wallDisc(p, 0.5, 0.42, 21.5, 0.2, 6, '#c4c4cc', 1.6);
+      wallDisc(p, 0.5, 0.42, 21.5, 0.07, 2.2, '#9b86f0', 1.2);
+      // Auriculares violetas apoyados en la base, delante del reproductor
+      p.raw(0.8, 0.8, 14, (x, y) =>
+        `<path d="M${x - 6} ${y}Q${x} ${y - 11} ${x + 6} ${y - 2}" fill="none" stroke="${LINE}" stroke-width="4.2" stroke-linecap="round"/>` +
+        `<path d="M${x - 6} ${y}Q${x} ${y - 11} ${x + 6} ${y - 2}" fill="none" stroke="${VIOLET}" stroke-width="2.2" stroke-linecap="round"/>` +
+        `<ellipse cx="${x - 6}" cy="${y + 0.5}" rx="3.2" ry="2.6" fill="${shade(VIOLET, 0.25)}" stroke="${LINE}" stroke-width="1.6"/>` +
+        `<ellipse cx="${x + 6}" cy="${y - 1.5}" rx="3.2" ry="2.6" fill="${VIOLET}" stroke="${LINE}" stroke-width="1.6"/>`);
+    },
+  },
 ];
 
 export const FURNITURE_ART = FURNITURE;

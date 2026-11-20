@@ -57,6 +57,11 @@ for (const [id, picks] of Object.entries(selection)) {
       // Recorta silencio por delante, da la vuelta y recorta por detrás; microfundidos contra clics.
       filters.push(trim, 'afade=t=in:d=0.005', 'areverse', trim, 'afade=t=in:d=0.02', 'areverse');
     }
+    if (def.bus === 'music' && def.loop && def.duration > 30) {
+      // Temas largos del MP3 (spec 42): la API de música no da bucles perfectos; un fundido corto en cada
+      // extremo hace que el empalme del bucle sea una respiración y no un golpe.
+      filters.push('afade=t=in:d=0.6', 'areverse', 'afade=t=in:d=1.2', 'areverse');
+    }
     filters.push(`loudnorm=I=${LUFS[def.bus]}:TP=-1.5:LRA=11`);
     const stereo = def.bus === 'ambient' || def.bus === 'music';
     const args = [

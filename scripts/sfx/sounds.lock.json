@@ -119,6 +119,31 @@
     "candidates": 1,
     "generatedAt": "2026-11-19T08:36:45.616Z"
   },
+  "amb.mixer.birds": {
+    "hash": "c200bba657d4c55a",
+    "candidates": 2,
+    "generatedAt": "2026-11-19T17:17:33.568Z"
+  },
+  "amb.mixer.crickets": {
+    "hash": "1d05d4e4029e5243",
+    "candidates": 2,
+    "generatedAt": "2026-11-19T17:17:26.918Z"
+  },
+  "amb.mixer.rain": {
+    "hash": "9f7209a699e10f65",
+    "candidates": 2,
+    "generatedAt": "2026-11-19T17:17:18.333Z"
+  },
+  "amb.mixer.thunder": {
+    "hash": "db5c60eb07cba6db",
+    "candidates": 2,
+    "generatedAt": "2026-11-19T17:17:19.175Z"
+  },
+  "amb.mixer.wind": {
+    "hash": "85798e9ef3cc074c",
+    "candidates": 2,
+    "generatedAt": "2026-11-19T17:17:27.311Z"
+  },
   "battle.crit": {
     "hash": "dd45ef4e5f9bd28c",
     "candidates": 1,
@@ -703,6 +728,21 @@
     "hash": "fa28bf2e00824269",
     "candidates": 2,
     "generatedAt": "2026-11-19T14:58:50.327Z"
+  },
+  "music.lofi.bits": {
+    "hash": "aa38a0b2ab30addb",
+    "candidates": 2,
+    "generatedAt": "2026-11-19T17:17:11.031Z"
+  },
+  "music.lofi.night": {
+    "hash": "db27cd33b3cead1c",
+    "candidates": 2,
+    "generatedAt": "2026-11-19T17:17:34.309Z"
+  },
+  "music.lofi.tea": {
+    "hash": "0b6a4be244625765",
+    "candidates": 2,
+    "generatedAt": "2026-11-19T17:17:12.285Z"
   },
   "music.primer-latido": {
     "hash": "dcc325ac18a2e6fd",

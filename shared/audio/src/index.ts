@@ -4,3 +4,4 @@ export * from './profiles';
 export * from './gate';
 export * from './synth';
 export * from './engine';
+export * from './mixer';

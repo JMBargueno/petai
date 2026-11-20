@@ -32,7 +32,7 @@ export interface PetState {
   accessories?: EquippedAccessories;
 }
 
-export type Interaction = 'sleep' | 'eat' | 'play' | 'bathe' | 'sit';
+export type Interaction = 'sleep' | 'eat' | 'play' | 'bathe' | 'sit' | 'listen';
 
 /** Mueble del catálogo (solo lo que la escena necesita para dibujarlo y colocarlo). */
 export interface RoomFurniture {
@@ -282,7 +282,7 @@ function parseEffectParams(raw: unknown): EffectParams {
   return out;
 }
 
-const INTERACTIONS: Interaction[] = ['sleep', 'eat', 'play', 'bathe', 'sit'];
+const INTERACTIONS: Interaction[] = ['sleep', 'eat', 'play', 'bathe', 'sit', 'listen'];
 const int = (v: unknown, min = 0, max = 63) => Number.isInteger(v) && (v as number) >= min && (v as number) <= max;
 const isPair = (v: unknown): v is [number, number] =>
   Array.isArray(v) && v.length === 2 && v.every((n) => int(n, 1, 8));

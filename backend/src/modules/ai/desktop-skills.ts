@@ -19,6 +19,8 @@ export interface DesktopSkillInfo {
   active: string;
   /** Cómo la usa el entrenador (para que la mascota sepa explicarlo). */
   howTo: string;
+  /** Mueble del hábitat que hay que tener colocado para desbloquearla (spec 42), con su nombre. */
+  requiredFurniture?: { id: string; name: string };
 }
 
 export const DESKTOP_SKILL_REGISTRY: DesktopSkillInfo[] = [
@@ -103,6 +105,17 @@ export const DESKTOP_SKILL_REGISTRY: DesktopSkillInfo[] = [
     howTo: 'pedirme un pomodoro o abrir el temporizador junto a mí',
   },
   {
+    id: 'ambient_mixer',
+    name: 'Música ambiente',
+    requiredBonding: 0,
+    requiredIntelligence: 1,
+    defaultEnabled: true,
+    sensitive: false,
+    active: 'Tienes un reproductor MP3: pones temas lofi en bucle y sonidos de ambiente (lluvia, trueno, viento, grillos, pájaros) por capas.',
+    howTo: 'pedirme música o lluvia, o tocar el MP3 que flota junto a mí',
+    requiredFurniture: { id: 'mp3', name: 'Reproductor MP3' },
+  },
+  {
     id: 'context_awareness',
     name: 'Conciencia de la app en foco',
     requiredBonding: 25,
@@ -143,22 +156,25 @@ const LEVEL_NAME: Record<number, string> = { 1: 'Charla', 2: 'Memoria', 3: 'Agen
 export type SkillState =
   | { state: 'active' }
   | { state: 'off' }
-  | { state: 'locked'; missingBonding: number; missingLevel: number | null };
+  | { state: 'locked'; missingBonding: number; missingLevel: number | null; missingFurniture?: string };
 
 export function skillStateOf(
   skill: DesktopSkillInfo,
   authorizations: Record<string, unknown> | null | undefined,
-  pet: { bonding?: number | null; intelligence?: number | null },
+  pet: { bonding?: number | null; intelligence?: number | null; ownedFurniture?: readonly string[] | null },
 ): SkillState {
   // Un valor no numérico cuenta como 0 (NaN haría que la comprobación de bloqueo fallara abierta)
   const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
   const bonding = Math.round(num(pet.bonding));
   const level = intelligenceLevel(num(pet.intelligence));
-  if (bonding < skill.requiredBonding || level < skill.requiredIntelligence) {
+  // Sin la lista de muebles cuenta como que no lo tiene (falla cerrado)
+  const furnitureMissing = !!skill.requiredFurniture && !(pet.ownedFurniture ?? []).includes(skill.requiredFurniture.id);
+  if (bonding < skill.requiredBonding || level < skill.requiredIntelligence || furnitureMissing) {
     return {
       state: 'locked',
       missingBonding: Math.max(0, skill.requiredBonding - bonding),
       missingLevel: level < skill.requiredIntelligence ? skill.requiredIntelligence : null,
+      ...(furnitureMissing ? { missingFurniture: skill.requiredFurniture!.name } : {}),
     };
   }
   const raw = authorizations && typeof authorizations === 'object' ? authorizations[skill.id] : undefined;
@@ -171,7 +187,7 @@ export function skillStateOf(
  * bloqueadas (con lo que falta), para que la mascota sepa explicar y sugerir.
  */
 export function buildDesktopSkillsBlock(
-  pet: { desktopSkills?: unknown; bonding?: number | null; intelligence?: number | null },
+  pet: { desktopSkills?: unknown; bonding?: number | null; intelligence?: number | null; ownedFurniture?: readonly string[] | null },
   opts: { canToggle?: boolean } = {},
 ): string {
   const auth = (pet.desktopSkills && typeof pet.desktopSkills === 'object' ? pet.desktopSkills : {}) as Record<string, unknown>;
@@ -186,6 +202,7 @@ export function buildDesktopSkillsBlock(
       const needs: string[] = [];
       if (st.missingBonding > 0) needs.push(`${st.missingBonding} puntos más de vínculo`);
       if (st.missingLevel) needs.push(`nivel de IA ${LEVEL_NAME[st.missingLevel]}`);
+      if (st.missingFurniture) needs.push(`tener el mueble ${st.missingFurniture} en tu hábitat`);
       locked.push(`- ${skill.name}: te falta ${needs.join(' y ')}`);
     }
   }

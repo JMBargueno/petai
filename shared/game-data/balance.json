@@ -434,7 +434,8 @@
         "bathe": { "hygiene": 3 },
         "sit": { "energy": 2 },
         "sleep": { "energy": 3 },
-        "play": { "happiness": 2, "energy": -1 }
+        "play": { "happiness": 2, "energy": -1 },
+        "listen": { "happiness": 2 }
       }
     }
   },
@@ -527,7 +528,8 @@
         "furniture_bathe": { "temper": -0.02 },
         "furniture_sit": { "temper": -0.02 },
         "furniture_sleep": { "temper": -0.03 },
-        "furniture_play": { "temper": 0.05, "curiosity": 0.02 }
+        "furniture_play": { "temper": 0.05, "curiosity": 0.02 },
+        "furniture_listen": { "temper": -0.02, "curiosity": 0.01 }
       }
     },
     "memory": {
@@ -847,7 +849,8 @@
           "cooldownMs": 15000,
           "boost": { "highEnergy": 1.5, "lowEnergy": 0.3, "lowHappiness": 2 }
         },
-        "sit": { "base": 0.8, "interaction": "sit", "weights": { "temper": -0.03 }, "cooldownMs": 15000, "boost": { "lowEnergy": 3 } }
+        "sit": { "base": 0.8, "interaction": "sit", "weights": { "temper": -0.03 }, "cooldownMs": 15000, "boost": { "lowEnergy": 3 } },
+        "listen": { "base": 0.6, "interaction": "listen", "weights": { "temper": -0.02, "curiosity": 0.01 }, "cooldownMs": 25000, "boost": { "lowHappiness": 2 } }
       }
     },
     "desktop": {

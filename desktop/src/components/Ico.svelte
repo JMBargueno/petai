@@ -9,6 +9,7 @@
     Circle, Egg, Gamepad2, Crown, Dices, Apple, Bath, ArrowUp, Users, ChefHat, Map, BookOpen, Skull,
     Dumbbell, ShoppingBag, Package, WandSparkles, Clock, Plus, Send, Trash2, ExternalLink, LogOut, User,
     Castle, Ghost, CircleHelp, Mountain, Utensils, Drumstick, Hand, Cookie, Volume2, VolumeX,
+    CloudRain, CloudLightning, Wind, Bird, Music,
   } from 'lucide-svelte';
 
   const ICONS: Record<string, any> = {
@@ -27,6 +28,11 @@
     magic: WandSparkles, clock: Clock, plus: Plus, send: Send, trash: Trash2, external: ExternalLink,
     logout: LogOut, user: User, castle: Castle, ghost: Ghost, help: CircleHelp, mountain: Mountain,
     food: Utensils, drumstick: Drumstick, hand: Hand, cookie: Cookie, volume: Volume2, mute: VolumeX,
+    rain: CloudRain,
+    thunder: CloudLightning,
+    wind: Wind,
+    bird: Bird,
+    music: Music,
   };
 
   export let n: string;
