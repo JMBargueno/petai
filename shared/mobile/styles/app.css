@@ -188,9 +188,9 @@ nav.tabbar button {
   border-top: 0;
   border-radius: var(--radius-pills);
   /* Cuánto del hueco de cada destino ocupa la lente a lo ancho (1 = el hueco entero). Con cinco
-     destinos el hueco mide ~72 pt, así que 0,8 deja una cápsula de ~58×41 pt: el icono respira y
-     sigue quedando aire entre una lente y la siguiente. */
-  --tab-lens-fill: 0.8;
+     destinos el hueco mide ~72 pt, así que 0,92 deja una cápsula de ~67×41 pt: llena el hueco sin
+     llegar a tocar la de al lado. */
+  --tab-lens-fill: 0.92;
   box-shadow: var(--shadow-3);
 }
 
@@ -231,7 +231,7 @@ nav.tabbar button {
   color: var(--accent-ink);
 }
 :root[data-platform='ios'] nav.tabbar button.active .tab-icon {
-  scale: 1.22;
+  scale: 1.34;
 }
 
 /* La lente: una gota de vidrio sobre el destino activo, que se desliza hasta el nuevo al cambiar.
@@ -257,17 +257,31 @@ nav.tabbar button {
   scale: var(--tab-lens-fill) 1;
   border-radius: var(--radius-pills);
   corner-shape: inherit;
-  background: var(--glass-tint);
-  backdrop-filter: saturate(1.5) brightness(1.08);
-  -webkit-backdrop-filter: saturate(1.5) brightness(1.08);
-  /* Canto iluminado arriba y sombra interior abajo: es lo que la lee como una gota convexa y no
-     como una pastilla plana. */
+  /* El bulto del cristal: claro en el centro, donde la lente es más gruesa, y apagándose hacia el
+     borde. Es lo que hace que se lea como una lupa y no como una pastilla translúcida. */
+  background:
+    radial-gradient(ellipse 72% 96% at 50% 42%, var(--glass-sheen), transparent 72%),
+    var(--glass-tint);
+  backdrop-filter: saturate(1.6) brightness(1.1);
+  -webkit-backdrop-filter: saturate(1.6) brightness(1.1);
+  /* Canto iluminado arriba, y sombra interior arriba y abajo: el grosor del vidrio visto de lado. */
   box-shadow:
     inset 0 0 0 0.5px var(--glass-edge),
     inset 0 1px 0 var(--glass-specular),
-    inset 0 -3px 6px -3px var(--glass-edge);
+    inset 0 4px 8px -5px var(--glass-edge),
+    inset 0 -4px 8px -5px var(--glass-edge);
   pointer-events: none;
-  transition: translate var(--dur-2) var(--ease-standard);
+  transition:
+    translate var(--dur-2) var(--ease-standard),
+    scale var(--dur-2) var(--ease-standard);
+}
+
+/* Mientras viaja, la lente se alarga y se aplana, como una gota de líquido que se estira al moverse
+   y recupera su forma al llegar. Es lo que convierte el desplazamiento en algo vivo en lugar de en
+   una pastilla que se teletransporta. La clase la pone y la quita el shell, que sabe cuándo empieza
+   el viaje y cuánto dura. */
+:root[data-platform='ios'] nav.tabbar.lens-moving::after {
+  scale: calc(var(--tab-lens-fill) * 1.16) 0.9;
 }
 
 /* Cuenta no está en la barra: sin destino activo, la lente se desvanece donde estaba. */
@@ -276,10 +290,14 @@ nav.tabbar button {
   transition: opacity var(--dur-1), translate var(--dur-2) var(--ease-standard);
 }
 
+/* Con movimiento reducido, la lente salta al destino nuevo sin recorrido ni estirón. */
 @media (prefers-reduced-motion: reduce) {
   :root[data-platform='ios'] nav.tabbar::after,
   :root[data-platform='ios'] nav.tabbar button .tab-icon {
     transition: none;
+  }
+  :root[data-platform='ios'] nav.tabbar.lens-moving::after {
+    scale: var(--tab-lens-fill) 1;
   }
 }
 :root[data-platform='ios'] nav.tabbar button:active {

@@ -41,6 +41,9 @@
    */
   let { config }: { config: MobileConfig } = $props();
 
+  /** Lo que tarda la lente en llegar al destino nuevo. El mismo valor que `--dur-2` en los tokens. */
+  const LENS_TRAVEL_MS = 300;
+
   let tab = $state<TabId>('pet');
   /**
    * Secciones dentro de una pestaña, como en el escritorio (Mascota › Inicio, Vínculo, Eclosión).
@@ -68,6 +71,19 @@
   const pet = $derived(activePet($core));
   /** Qué pestaña de la barra está activa, o -1 si la de ahora no sale en ella (Cuenta). */
   const activeTabIndex = $derived(config.tabs.findIndex((t) => t.id === tab));
+  /**
+   * La lente de la barra se estira mientras viaja de un destino a otro, como una gota de líquido
+   * que se alarga al moverse y recupera su forma al llegar. Dura lo que el desplazamiento.
+   */
+  let lensMoving = $state(false);
+  let lensTimer: ReturnType<typeof setTimeout> | undefined;
+  function goToTab(id: TabId) {
+    if (id === tab) return;
+    tab = id;
+    lensMoving = true;
+    clearTimeout(lensTimer);
+    lensTimer = setTimeout(() => (lensMoving = false), LENS_TRAVEL_MS);
+  }
 
   /**
    * Iniciativa (spec 41): la mascota habla por su cuenta. Qué dice y cuándo lo decide el servidor;
@@ -115,6 +131,7 @@
       document.removeEventListener('visibilitychange', onVisible);
       initiative.stop();
       clearInterval(clock);
+      clearTimeout(lensTimer);
       unphase();
     };
   });
@@ -343,6 +360,7 @@
     <nav
       class="tabbar"
       class:no-lens={activeTabIndex < 0}
+      class:lens-moving={lensMoving}
       aria-label="Secciones"
       style="--tab-count: {config.tabs.length}; --tab-index: {activeTabIndex};"
     >
@@ -352,7 +370,7 @@
           class:active={tab === item.id}
           aria-current={tab === item.id ? 'page' : undefined}
           aria-label={item.label}
-          onclick={() => (tab = item.id)}
+          onclick={() => goToTab(item.id)}
         >
           <span class="tab-icon"><Ico n={item.icon} size={22} /></span>
           <span class="tab-label">{item.label}</span>
