@@ -507,7 +507,7 @@
   }
   .dish:hover:not(:disabled) {
     border-color: var(--line);
-    transform: translateY(-1px);
+    transform: translateY(calc(var(--hover-lift, -2px) / 2));
   }
   .dish:disabled {
     cursor: not-allowed;
@@ -688,7 +688,7 @@
   }
   .ing--btn:hover:not(:disabled) {
     border-color: var(--line);
-    transform: translateY(-1px);
+    transform: translateY(calc(var(--hover-lift, -2px) / 2));
   }
   .ing--btn:disabled {
     opacity: 0.3;

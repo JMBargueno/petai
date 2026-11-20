@@ -16,6 +16,7 @@ import { ACCESSORY_SLOTS } from './bake/accessories';
 import type { AccessoryLayer } from './pet/PetSprite';
 import { PetSprite, FRAME } from './pet/PetSprite';
 import { IsoRoom } from './room/IsoRoom';
+import { roomPaletteFor } from './room/roomPalette';
 import type { RoomMind } from './room/petWander';
 import { styleFor } from './room/roomStyles';
 import { Ambience, NO_AMBIENCE, type AmbienceState } from './ambience/Ambience';
@@ -37,6 +38,7 @@ import {
   type SceneEvent,
   type StoryState,
   type ThemeMode,
+  type ThemePalette,
 } from './protocol';
 
 /** Hora (minuto del día) y clima (código WMO) de una escena de historia con ambiente propio. */
@@ -87,6 +89,9 @@ export class PockaiScene {
   private loadSeq = 0;
   private paused = false;
   private theme: ThemeMode = 'light';
+  /** Tema de la app anfitriona y su paleta de canvas: tiñen la sala (room/roomPalette.ts). */
+  private themeId = 'classic';
+  private themePalette: ThemePalette | null = null;
   private reducedMotion = false;
   // Estado de sala que puede llegar antes que la propia sala
   private activity: Activity = 'idle';
@@ -229,6 +234,9 @@ export class PockaiScene {
         break;
       case 'setTheme':
         this.theme = msg.mode;
+        this.themeId = msg.themeId ?? this.themeId;
+        this.themePalette = msg.palette ?? this.themePalette;
+        this.room?.setPalette(roomPaletteFor(this.themeId, this.themePalette));
         break;
       case 'setPaused':
         this.paused = msg.paused;
@@ -333,6 +341,11 @@ export class PockaiScene {
     return this.theme;
   }
 
+  /** Tema de la app (`classic`, `cozy`…) y su paleta, tal como los mandó el anfitrión. */
+  get appTheme(): { id: string; palette: ThemePalette | null } {
+    return { id: this.themeId, palette: this.themePalette };
+  }
+
   private setRoom(state: RoomState | null): void {
     if (!state) {
       if (this.room) {
@@ -362,6 +375,7 @@ export class PockaiScene {
       this.room.setMind(this.mind);
       this.room.setActivity(this.activity, this.rest);
       this.room.setNight(this.night);
+      this.room.setPalette(roomPaletteFor(this.themeId, this.themePalette));
       this.room.setEditMode(this.edit);
       // Cielo detrás de la sala y clima por delante.
       const room = this.room;

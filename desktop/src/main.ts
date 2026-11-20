@@ -1,16 +1,21 @@
 import '@pockai/ui/fonts.css';
 import '@pockai/ui/tokens.css';
+import '@pockai/ui/themes.css';
+import '@pockai/ui/scene.css';
 import '@pockai/ui/base.css';
 import '@pockai/ui/kit.css';
+import '@pockai/ui/platform.css';
 import './styles/desktop.css';
 import { mount } from 'svelte';
 import App from './App.svelte';
-import { onUiFeedback, setUiSound } from '@pockai/ui';
+import { initAppearance, onUiFeedback, resolvePlatform, setPlatform, setUiSound } from '@pockai/ui';
 import { sfx, sfxLoop, sfxStopLoop } from './lib/audio';
-import { initTheme } from './lib/theme';
 
-// Antes de montar, para que la primera pintura ya salga con el tema elegido.
-initTheme();
+// Antes de montar, para que la primera pintura ya salga bien: los componentes se pintan como en el
+// escritorio (en desarrollo, `?platform=android|ios` deja probar los otros) y con la apariencia elegida,
+// que se sincroniza entre las ventanas.
+setPlatform(resolvePlatform('desktop', location.search, import.meta.env.DEV));
+initAppearance();
 
 // Los componentes de @pockai/ui no suenan: avisan, y aquí se les pone el efecto de sonido.
 const UI_SOUNDS = {

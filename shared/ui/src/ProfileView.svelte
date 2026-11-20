@@ -187,10 +187,10 @@
     gap: var(--space-3);
     align-items: center;
     padding: var(--space-3);
-    border: 1px solid var(--line);
+    border: var(--outline);
     border-radius: var(--radius-2xl);
     background: color-mix(in srgb, var(--theme-social) 14%, var(--surface));
-    box-shadow: 2px 3px 0 var(--line);
+    box-shadow: var(--sticker, 2px 3px 0 var(--line));
   }
   .pf-head__body {
     display: flex;
@@ -338,7 +338,7 @@
   .pf-badge.featured {
     border-color: var(--line);
     background: color-mix(in srgb, var(--theme-social) 22%, var(--surface));
-    box-shadow: 1px 2px 0 var(--line);
+    box-shadow: var(--sticker, 1px 2px 0 var(--line));
   }
   .pf-badge__name {
     font-size: var(--text-caption);

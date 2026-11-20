@@ -8,6 +8,7 @@
   } from '../lib/sprites';
   import { AnimationController, resolveBaseState } from '../lib/animation/AnimationController';
   import { parseEquipped } from '@pockai/scene/bake';
+  import { DEFAULT_PET_PALETTE } from '@pockai/ui';
   import { drawWorn, loadWornSet, type WornSet } from '../lib/accessories';
   import type { Reaction } from '../lib/animation/eventMap';
   import EnvironmentalOverlay from './EnvironmentalOverlay.svelte';
@@ -241,7 +242,7 @@
   });
   $: isShiny = pet?.shiny || false;
   $: visualSeed = pet?.visualSeed ?? 1337;
-  $: palette = pet?.palette || { primary: '#E25822', secondary: '#F3C544', accent: '#6D1600' };
+  $: palette = pet?.palette || DEFAULT_PET_PALETTE;
 
   // Biblioteca de clips de la especie y estado base derivado de la mascota
   $: {
@@ -1186,7 +1187,7 @@
         if (isWhiteFlash) {
           ctx.save();
           ctx.globalCompositeOperation = 'source-atop';
-          ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.75)'; /* color-ok: efectos de la mascota sobre el escritorio */
           ctx.fillRect(0, 0, PET_SIZE, PET_SIZE);
           ctx.restore();
         }
@@ -2029,7 +2030,7 @@
   }
 
   .pet-container.over-home .pet-body {
-    filter: drop-shadow(0 0 14px rgba(52, 211, 153, 0.95));
+    filter: drop-shadow(0 0 14px rgba(52, 211, 153, 0.95)); /* color-ok: efectos de la mascota sobre el escritorio */
   }
 
   .pet-container.entering-home {
@@ -2147,7 +2148,7 @@
   }
 
   .pet-container.drag-over .pet-body {
-    filter: drop-shadow(0 0 16px rgba(99, 102, 241, 0.9));
+    filter: drop-shadow(0 0 16px rgba(99, 102, 241, 0.9)); /* color-ok: efectos de la mascota sobre el escritorio */
   }
 
   .high-five-badge {
@@ -2298,7 +2299,7 @@
     white-space: nowrap;
     display: flex;
     gap: var(--space-1);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); /* color-ok: efectos de la mascota sobre el escritorio */
     border: 1px solid var(--line-soft);
     pointer-events: none;
     z-index: calc(var(--z-pet) + 5);
@@ -2367,7 +2368,7 @@
     background: radial-gradient(circle, color-mix(in srgb, var(--color-sunburst) 60%, var(--surface)) 0%, transparent 70%);
   }
   .env-tint.env--evening {
-    background: radial-gradient(circle, rgba(244, 114, 182, 0.5) 0%, transparent 70%);
+    background: radial-gradient(circle, rgba(244, 114, 182, 0.5) 0%, transparent 70%); /* color-ok: efectos de la mascota sobre el escritorio */
   }
 
   /* Clima (refuerza el tinte del tramo) */
@@ -2378,7 +2379,7 @@
   }
   .env-tint.env--weather-snow,
   .env-tint.env--weather-cold {
-    background: radial-gradient(circle, rgba(147, 197, 253, 0.85) 0%, transparent 70%);
+    background: radial-gradient(circle, rgba(147, 197, 253, 0.85) 0%, transparent 70%); /* color-ok: efectos de la mascota sobre el escritorio */
     opacity: 0.55;
   }
   .env-tint.env--weather-hot {

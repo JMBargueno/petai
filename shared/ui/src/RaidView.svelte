@@ -39,6 +39,11 @@
 
   const RAID_STATUS: Record<string, string> = { active: 'En curso', expired: 'Escapó', failed: 'Escapó', cancelled: 'Cancelado' };
 
+  /** Porcentaje con un decimal como mucho (el servidor lo manda sin redondear: 4.3999999…). */
+  function pct(n: number): string {
+    return (Math.round(n * 10) / 10).toLocaleString('es-ES');
+  }
+
   function fmt(n: number): string {
     return n?.toLocaleString?.() ?? String(n);
   }
@@ -63,12 +68,12 @@
           max={current.hpGlobal}
           color={hpColor(current.hpPercent)}
           label="Vida del jefe"
-          detail="{fmt(current.hpRemaining)} / {fmt(current.hpGlobal)} ({current.hpPercent}%)"
+          detail="{fmt(current.hpRemaining)} / {fmt(current.hpGlobal)} ({pct(current.hpPercent)}%)"
         />
         <p class="ui-card__hint">
           {#if current.myContribution}
             Tu contribución: <b>{fmt(current.myContribution.damageDealt)}</b> de daño · {current.myContribution.attacks} ataques ·
-            {current.myContribution.percentage}%
+            {pct(current.myContribution.percentage)}%
           {:else}
             Aún no has atacado a este jefe.
           {/if}
@@ -95,7 +100,7 @@
             rank={e.rank}
             highlight={e.mine}
             title={e.displayName}
-            sub="{e.petName} · Nv. {e.petLevel} · {e.attacks} ataques · {e.percentage}% del daño"
+            sub="{e.petName} · Nv. {e.petLevel} · {e.attacks} ataques · {pct(e.percentage)}% del daño"
             value={fmt(e.damageDealt)}
           />
         {:else}

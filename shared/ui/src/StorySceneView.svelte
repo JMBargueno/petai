@@ -13,6 +13,7 @@
   import { onDestroy, onMount, createEventDispatcher } from 'svelte';
   import { PockaiScene, parseClock, type HostMessage, type SceneEvent, type StoryBeat, type StoryState } from '@pockai/scene';
   import { uiSfxFirst } from './sound';
+  import { DEFAULT_PET_PALETTE } from './maps';
 
   export let pet: any = null;
   /** Escena en curso (`null` mientras no hay historia). */
@@ -55,8 +56,8 @@
         species: speciesKey,
         stage: pet.stage ?? 'baby',
         palette: {
-          primary: pet.palette?.primary ?? '#E25822',
-          secondary: pet.palette?.secondary ?? '#F3C544',
+          primary: pet.palette?.primary ?? DEFAULT_PET_PALETTE.primary,
+          secondary: pet.palette?.secondary ?? DEFAULT_PET_PALETTE.secondary,
         },
         pattern: pet.pattern?.id && pet.pattern.id !== 'plain' ? pet.pattern.id : null,
         visualSeed: pet.visualSeed ?? 1337,
@@ -85,7 +86,7 @@
     height: var(--scene-h);
     overflow: hidden;
     border-radius: var(--radius-cards);
-    background: var(--surface-2, #15141f);
+    background: var(--surface-2);
   }
   .story-scene :global(canvas:focus-visible) {
     outline: var(--focus-ring);

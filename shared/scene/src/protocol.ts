@@ -19,6 +19,8 @@ export type { RoomMind };
 
 export type Stage = 'egg' | 'baby' | 'juvenile' | 'adult' | 'final';
 export type ThemeMode = 'light' | 'dark';
+/** Paleta de un tema para lo que se dibuja: cada clave es un color o una lista de colores en hex. */
+export type ThemePalette = Record<string, string | readonly string[]>;
 
 export interface PetState {
   /** Id de especie (species.json); desconocida → `ignisaur`. `egg` para el huevo. */
@@ -135,7 +137,11 @@ export interface StoryState {
 export type HostMessage =
   | { type: 'setPet'; pet: PetState }
   | { type: 'playClip'; clip: string; once?: boolean }
-  | { type: 'setTheme'; mode: ThemeMode }
+  /**
+   * Apariencia del anfitrión: el esquema y, si lo hay, el tema (`classic`, `cozy`…) con su paleta de
+   * canvas en hex (claves de CanvasPalette de @pockai/ui), para teñir efectos y destellos.
+   */
+  | { type: 'setTheme'; mode: ThemeMode; themeId?: string; palette?: ThemePalette }
   | { type: 'setPaused'; paused: boolean }
   | { type: 'setFacing'; facing: 1 | -1 }
   | { type: 'setRoom'; room: RoomState | null }
@@ -287,6 +293,23 @@ const int = (v: unknown, min = 0, max = 63) => Number.isInteger(v) && (v as numb
 const isPair = (v: unknown): v is [number, number] =>
   Array.isArray(v) && v.length === 2 && v.every((n) => int(n, 1, 8));
 
+const COLOR = /^#[0-9a-fA-F]{6}$|^\d{1,3}, \d{1,3}, \d{1,3}$/;
+
+/** Paleta de tema validada (colores hex o "r, g, b", sueltos o en listas cortas); null si no vale. */
+function parseThemePalette(raw: unknown): ThemePalette | null {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  const out: Record<string, string | string[]> = {};
+  const entries = Object.entries(raw as Record<string, unknown>);
+  if (entries.length > 24) return null;
+  for (const [k, v] of entries) {
+    if (!/^[a-zA-Z]{1,24}$/.test(k)) return null;
+    if (typeof v === 'string' && COLOR.test(v)) out[k] = v;
+    else if (Array.isArray(v) && v.length <= 8 && v.every((c) => typeof c === 'string' && COLOR.test(c))) out[k] = [...v];
+    else return null;
+  }
+  return out;
+}
+
 /** Sala validada; undefined si está mal formada. */
 function parseRoom(raw: unknown): RoomState | null | undefined {
   if (raw === null) return null;
@@ -359,8 +382,20 @@ export function parseHostMessage(raw: unknown): HostMessage | null {
       return typeof m.scene === 'string' && /^[a-z_]{1,32}$/.test(m.scene) ? { type: 'playScene', scene: m.scene } : null;
     case 'playClip':
       return typeof m.clip === 'string' ? { type: 'playClip', clip: m.clip, once: m.once === true } : null;
-    case 'setTheme':
-      return m.mode === 'dark' || m.mode === 'light' ? { type: 'setTheme', mode: m.mode } : null;
+    case 'setTheme': {
+      if (m.mode !== 'dark' && m.mode !== 'light') return null;
+      const out: Extract<HostMessage, { type: 'setTheme' }> = { type: 'setTheme', mode: m.mode };
+      if (m.themeId !== undefined) {
+        if (typeof m.themeId !== 'string' || !/^[a-z0-9-]{1,32}$/.test(m.themeId)) return null;
+        out.themeId = m.themeId;
+      }
+      if (m.palette !== undefined) {
+        const palette = parseThemePalette(m.palette);
+        if (!palette) return null;
+        out.palette = palette;
+      }
+      return out;
+    }
     case 'setPaused':
       return typeof m.paused === 'boolean' ? { type: 'setPaused', paused: m.paused } : null;
     case 'setFacing':

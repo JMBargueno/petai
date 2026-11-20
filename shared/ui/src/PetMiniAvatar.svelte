@@ -8,6 +8,7 @@
     type BakedPetSheet,
   } from '@pockai/scene/sprites';
   import { AnimationController, resolveBaseState } from '@pockai/scene/sprites';
+  import { DEFAULT_PET_PALETTE } from './maps';
 
   export let pet: any;
   export let size: number = 80;
@@ -39,7 +40,7 @@
   $: isSleeping = pet?.sleeping || false;
   $: isShiny = pet?.shiny || false;
   $: visualSeed = pet?.visualSeed ?? 1337;
-  $: palette = pet?.palette || { primary: '#E25822', secondary: '#F3C544', accent: '#6D1600' };
+  $: palette = pet?.palette || DEFAULT_PET_PALETTE;
   /** Etapa evolutiva: cada una tiene su hoja (baby, juvenile, adult, final). */
   $: stage = pet?.stage ?? null;
 
@@ -84,7 +85,7 @@
   // Fallback SVG
   $: baseSvg = getPetSvg(speciesKey, activeAnim);
   $: patternSvg = getPatternSvg(patternKey);
-  $: accentColor = palette.secondary || palette.accent || '#FFFFFF';
+  $: accentColor = palette.secondary || palette.accent || '#FFFFFF'; // color-ok: color de la criatura
 
   function loop(time: number) {
     const dt = lastTime ? Math.min(time - lastTime, 250) : 16;

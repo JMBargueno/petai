@@ -95,19 +95,14 @@ label {
   flex: 1 1 140px;
 }
 
-/* En el móvil se toca con el dedo: los controles del kit suben a 48 px de alto. */
-.btn,
-.input {
-  min-height: 48px;
-}
-
+/* El alto táctil de los controles del kit (48 en Android, 44 en iOS) lo pone @pockai/ui/platform.css. */
 .input {
   font-size: var(--text-body-lg);
 }
 
 /* Lo mismo para los chips de comida de la ficha compartida, pensados para el ratón. */
 main .screen .food-chip {
-  min-height: 48px;
+  min-height: var(--hit-min);
   padding-inline: var(--space-3);
   font-size: var(--text-label);
 }
@@ -118,41 +113,79 @@ main .screen .food-chip {
   flex-direction: column;
   gap: var(--space-4);
   flex: 1;
-  padding-bottom: 84px;
+  padding-bottom: calc(var(--nav-h) + var(--space-1));
 }
 
-/* Barra de pestañas: la navegación es de cada app, no de la biblioteca. */
-nav {
+/* Barra de pestañas: la navegación es de cada app, no de la biblioteca. Se pinta como en el sistema
+   (data-platform): barra de navegación de Material 3 en Android y barra de pestañas en iOS. */
+nav.tabbar {
   position: fixed;
   inset: auto 0 0 0;
   display: flex;
   justify-content: space-around;
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-4) max(var(--space-2), env(safe-area-inset-bottom));
+  min-height: var(--nav-h);
+  padding: 0 var(--space-2) env(safe-area-inset-bottom);
   background: var(--surface);
   border-top: 1px solid var(--line-soft);
 }
 
-nav button {
+nav.tabbar button {
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
-  min-height: 56px;
-  padding: var(--space-2);
+  justify-content: center;
+  gap: var(--space-1);
+  min-height: var(--hit-min);
+  padding: var(--space-2) 0;
   font: inherit;
   font-size: var(--text-caption);
   font-weight: 600;
   color: var(--ink-muted);
   background: transparent;
   border: 0;
-  border-radius: var(--radius-md);
+  -webkit-tap-highlight-color: transparent;
 }
 
-nav button.active {
-  color: var(--accent-ink);
+/* Material 3: el icono activo va dentro de una píldora de 64×32 con el tinte del acento. */
+:root[data-platform='android'] nav.tabbar {
+  border-top: 0;
   background: var(--surface-2);
+}
+:root[data-platform='android'] nav.tabbar .tab-icon {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 32px;
+  border-radius: var(--radius-pills);
+  transition: background var(--dur-2) var(--ease-standard);
+}
+:root[data-platform='android'] nav.tabbar button.active {
+  color: var(--ink);
+  font-weight: 700;
+}
+:root[data-platform='android'] nav.tabbar button.active .tab-icon {
+  background: color-mix(in srgb, var(--accent) 24%, var(--surface-2));
+}
+
+/* iOS: barra translúcida con desenfoque; el activo solo cambia de color, sin fondo. */
+:root[data-platform='ios'] nav.tabbar {
+  padding-top: var(--space-1);
+  background: var(--surface-glass);
+  backdrop-filter: blur(20px) saturate(1.8);
+  -webkit-backdrop-filter: blur(20px) saturate(1.8);
+}
+:root[data-platform='ios'] nav.tabbar button {
+  gap: 2px;
+  padding: var(--space-1) 0;
+  font-size: 10px;
+  font-weight: 500;
+}
+:root[data-platform='ios'] nav.tabbar button:active {
+  opacity: var(--press-opacity);
+}
+:root[data-platform='ios'] nav.tabbar button.active {
+  color: var(--accent-ink);
 }
 
 /* En el ancho de un móvil no caben cuatro cifras ni cinco desbloqueos en fila: menos columnas. */

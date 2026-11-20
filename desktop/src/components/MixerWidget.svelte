@@ -79,7 +79,7 @@
     padding: var(--space-3);
     border: 1px solid var(--line-soft);
     border-radius: var(--radius-2xl);
-    background: color-mix(in srgb, var(--color-electric-blue, #5c4ade) 8%, var(--surface));
+    background: color-mix(in srgb, var(--color-electric-blue) 8%, var(--surface));
   }
   .mixer.playing {
     border-color: var(--line);
@@ -108,7 +108,7 @@
   .slider input {
     flex: 1;
     min-width: 0;
-    accent-color: var(--success, #2fa36b);
+    accent-color: var(--success);
   }
   .slider {
     display: flex;
@@ -135,8 +135,8 @@
     min-width: 7.5rem;
   }
   .chip.on {
-    border-color: var(--success, #2fa36b);
-    background: color-mix(in srgb, var(--success, #2fa36b) 16%, var(--surface));
+    border-color: var(--success);
+    background: color-mix(in srgb, var(--success) 16%, var(--surface));
   }
   .chip:focus-visible {
     outline: 2px solid var(--focus, currentColor);

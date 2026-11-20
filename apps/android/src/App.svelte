@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { AccountView, BackpackView, Button, Card, CurrencyPill, HatchView, Ico, Notice, PetHomeView, Segmented, ShopView } from '@pockai/ui';
+  import { AccountView, AppearancePicker, BackpackView, Button, Card, CurrencyPill, HatchView, Ico, Notice, PetHomeView, Segmented, ShopView } from '@pockai/ui';
   import { stateSelectPet } from '@pockai/client';
   import AdventureScreen from './screens/AdventureScreen.svelte';
   import ArenaScreen from './screens/ArenaScreen.svelte';
@@ -42,7 +42,7 @@
   let progressSection = $state<'missions' | 'season'>('missions');
   let playSection = $state<'games' | 'arena' | 'raid' | 'tournament' | 'training' | 'cooking' | 'adventure'>('games');
   let shopSection = $state<'store' | 'chests'>('store');
-  let accountSection = $state<'account' | 'profile' | 'friends' | 'visits' | 'clans'>('account');
+  let accountSection = $state<'account' | 'profile' | 'friends' | 'visits' | 'clans' | 'settings'>('account');
   /** Amigo que se eligió con «Visitar» en Amigos. */
   let visitFriend = $state('');
   const ACCOUNT_SECTIONS = [
@@ -51,6 +51,7 @@
     { value: 'friends', label: 'Amigos', icon: 'users' },
     { value: 'visits', label: 'Visitas', icon: 'home' },
     { value: 'clans', label: 'Clanes', icon: 'shield' },
+    { value: 'settings', label: 'Ajustes', icon: 'settings' },
   ];
   const PLAY_SECTIONS = [
     { value: 'games', label: 'Minijuegos', icon: 'gamepad' },
@@ -287,6 +288,10 @@
           {#key visitFriend}
             <VisitsScreen initialFriend={visitFriend} onGoFriends={() => (accountSection = 'friends')} />
           {/key}
+        {:else if accountSection === 'settings'}
+          <Card title="Apariencia" icon="sun">
+            <AppearancePicker />
+          </Card>
         {:else}
           <AccountView user={$core.user} on:logout={leave} />
         {/if}
@@ -306,10 +311,10 @@
       {/if}
     </div>
 
-    <nav aria-label="Secciones">
+    <nav class="tabbar" aria-label="Secciones">
       {#each TABS as item (item.id)}
         <button type="button" class:active={tab === item.id} aria-current={tab === item.id ? 'page' : undefined} onclick={() => (tab = item.id)}>
-          <Ico n={item.icon} size={22} />
+          <span class="tab-icon"><Ico n={item.icon} size={22} /></span>
           <span>{item.label}</span>
         </button>
       {/each}

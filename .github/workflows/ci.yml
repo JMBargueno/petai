@@ -37,6 +37,10 @@ jobs:
       - name: Validate Layered Asset Pipeline
         run: node scripts/validate-assets.js
 
+      # Los componentes pintan con tokens de tema: ningún color fijo nuevo en la UI.
+      - name: Validate UI colors (themes)
+        run: node scripts/validate-ui-colors.js
+
   backend:
     name: Backend build & unit tests
     runs-on: ubuntu-latest
@@ -219,6 +223,13 @@ jobs:
           pnpm --filter @pockai/scene run typecheck
           pnpm --filter @pockai/scene run test
 
+      # Biblioteca de UI: plataforma (desktop/android/ios), apariencia y registro de temas.
+      - name: Test shared UI
+        run: |
+          pnpm --filter @pockai/ui run typecheck
+          pnpm --filter @pockai/ui run check
+          pnpm --filter @pockai/ui run test
+
       # Lado de la UI del núcleo cliente (spec 43): acciones, consultas y el canal del chat.
       - name: Test core client
         run: |
@@ -227,7 +238,13 @@ jobs:
 
       # UI de Android (Tauri): solo presentación sobre el núcleo.
       - name: Build Android UI
-        run: pnpm --filter @pockai/android-ui run build
+        run: |
+          pnpm --filter @pockai/android-ui run check
+          pnpm --filter @pockai/android-ui run build
+
+      # Lógica del escritorio (cargador de assets, tema, notificaciones…).
+      - name: Test desktop
+        run: pnpm --filter petai-desktop run test
 
       - name: Build frontend (Svelte + Vite)
         run: pnpm --filter petai-desktop run build
@@ -268,6 +285,42 @@ jobs:
             echo "::error::Los tipos del contrato están desactualizados. Ejecuta: cargo test -p pockai-core export_bindings"
             exit 1
           }
+
+  # Tests visuales del kit: el muestrario en cada plataforma (desktop/android/ios) × tema × esquema.
+  # Miden tamaños y colores calculados y dejan una captura de cada combinación en el informe.
+  ui-visual:
+    name: UI visual (plataformas y temas)
+    runs-on: ubuntu-latest
+    needs: validate-data
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Chromium
+        run: pnpm --filter @pockai/android-ui exec playwright install --with-deps chromium
+
+      - name: Run visual tests
+        run: pnpm --filter @pockai/android-ui run test:visual
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-visual-report
+          path: apps/android/playwright-report
+          retention-days: 14
 
   # La app de Tauri para Android (spec 43): el mismo shell y el mismo núcleo que el escritorio, con la
   # UI de apps/android. Compila el APK de depuración para el emulador (x86_64).

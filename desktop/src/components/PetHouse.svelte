@@ -67,7 +67,7 @@
     border: 1.5px solid var(--color-carbon);
     border-radius: var(--radius-2xl);
     background:
-      radial-gradient(80% 70% at 50% 35%, rgb(255 255 255 / 0.65), transparent 75%),
-      var(--band-sky, #dceeff);
+      radial-gradient(80% 70% at 50% 35%, var(--scene-sky-glow), transparent 75%),
+      var(--band-sky, var(--scene-sky));
   }
 </style>

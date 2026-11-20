@@ -2,6 +2,7 @@
   import { onDestroy, onMount } from 'svelte';
   import { bakePetSpriteSheet, getAnimLibrary, type BakedPetSheet } from '@pockai/scene/sprites';
   import { AnimationController } from '@pockai/scene/sprites';
+  import { EGG_PALETTE } from './maps';
 
   /** Huevo animado: `idle` (balanceo), `shake` (temblor), `crack` (grietas), `hatch` (eclosión). */
   export let anim: 'idle' | 'shake' | 'crack' | 'hatch' = 'idle';
@@ -37,7 +38,7 @@
   onMount(async () => {
     raf = requestAnimationFrame(loop);
     try {
-      sheet = await bakePetSpriteSheet('egg', 'plain', { primary: '#fff4d6', secondary: '#ffc94d' });
+      sheet = await bakePetSpriteSheet('egg', 'plain', EGG_PALETTE);
     } catch {
       sheet = null;
     }
