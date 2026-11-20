@@ -567,7 +567,7 @@
     width: 100%;
     border-radius: var(--radius-cards);
     overflow: hidden;
-    border: 1.5px solid var(--line);
+    border: var(--sticker-border, 1.5px solid var(--line));
     box-shadow: var(--shadow-pop);
     background:
       radial-gradient(80% 70% at 50% 35%, var(--scene-sky-glow), transparent 75%),

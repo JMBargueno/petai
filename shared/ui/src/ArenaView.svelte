@@ -454,7 +454,7 @@
   .outcome {
     font-weight: 800;
     font-size: var(--text-label);
-    border: 1px solid var(--line);
+    border: var(--outline);
   }
   .fight-row.win .outcome {
     background: var(--success);

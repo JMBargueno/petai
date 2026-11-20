@@ -98,7 +98,7 @@
     height: 16px;
     margin-top: -6px;
     border-radius: 50%;
-    border: 1px solid var(--line);
+    border: var(--outline);
     background: var(--surface);
     box-shadow: var(--shadow-1);
   }
@@ -116,7 +116,7 @@
     width: 16px;
     height: 16px;
     border-radius: 50%;
-    border: 1px solid var(--line);
+    border: var(--outline);
     background: var(--surface);
   }
   input[type='range']:focus-visible {
