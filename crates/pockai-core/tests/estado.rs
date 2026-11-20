@@ -457,6 +457,37 @@ async fn atacar_a_la_raid_y_abrir_un_cofre_ponen_al_dia_mascotas_saldo_e_inventa
 }
 
 #[tokio::test]
+async fn la_mazmorra_solo_pone_al_dia_el_estado_cuando_termina() {
+    use pockai_core::Action;
+    let server = MockServer::start().await;
+    mount_account(&server).await;
+    let core = core(&server);
+    core.state_load(LoadOptions::default()).await;
+    server.reset().await;
+    get(&server, "/v1/me", json!({ "id": "u1", "coins": 99 })).await;
+    get(&server, "/v1/pets", json!([{ "id": "p1", "hunger": 80 }, { "id": "p2", "hunger": 50 }])).await;
+    let submit = |status: &str| {
+        Mock::given(method("POST"))
+            .and(path("/v1/training/submit"))
+            .respond_with(ResponseTemplate::new(201).set_body_json(json!({ "floor": 0, "status": status })))
+    };
+    let turn = |element: &str| Action::TrainingSubmit { pet_id: "p1".into(), element: json!(element), prediction: Value::Null };
+
+    // Un piso a mitad de mazmorra: el saldo no se toca.
+    let guard = submit("active").mount_as_scoped(&server).await;
+    core.perform(turn("fire")).await.unwrap();
+    settle().await;
+    assert_eq!(core.state_snapshot().user["coins"], 10);
+    drop(guard);
+
+    // Mazmorra superada: el saldo se vuelve a pedir.
+    submit("completed").mount(&server).await;
+    core.perform(turn("water")).await.unwrap();
+    settle().await;
+    assert_eq!(core.state_snapshot().user["coins"], 99);
+}
+
+#[tokio::test]
 async fn una_respuesta_que_no_es_la_mascota_no_toca_el_estado() {
     let server = MockServer::start().await;
     mount_account(&server).await;
