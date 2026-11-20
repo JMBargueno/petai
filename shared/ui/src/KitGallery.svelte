@@ -16,6 +16,12 @@
   import FeatureHeader from './FeatureHeader.svelte';
   import SectionHeader from './SectionHeader.svelte';
   import TileButton from './TileButton.svelte';
+  import Badge from './Badge.svelte';
+  import CurrencyPill from './CurrencyPill.svelte';
+  import EmptyState from './EmptyState.svelte';
+  import Skeleton from './Skeleton.svelte';
+  import Slider from './Slider.svelte';
+  import StatTile from './StatTile.svelte';
   import { resolvedAppearance } from './appearance';
   import { PLATFORMS, getPlatform } from './platform';
 
@@ -26,6 +32,7 @@
   let sheet = false;
   let confirm = false;
   let tileFire = true;
+  let volume = 0.6;
   const platform = getPlatform();
 
   function link(p: string) {
@@ -117,8 +124,39 @@
   </Card>
 
   <Card title="Estado" icon="note">
-    <ProgressBar value={64} max={100} />
+    <ProgressBar value={64} max={100} label="Experiencia" detail="64 / 100" />
+    <ProgressBar value={30} max={100} size="sm" />
+    <ProgressBar value={82} max={100} size="lg" color="var(--success)" />
+    <Slider label="Volumen" icon="music" bind:value={volume} />
     <Notice tone="info">Los componentes cambian por plataforma; los colores, por tema.</Notice>
+  </Card>
+
+  <Card title="Etiquetas" icon="star">
+    <div class="ui-gallery__row">
+      <Badge>Neutra</Badge>
+      <Badge tone="accent" icon="star">Nueva</Badge>
+      <Badge tone="success">Lista</Badge>
+      <Badge tone="warning">Pronto</Badge>
+      <Badge tone="danger" solid>¡Ya!</Badge>
+      <Badge tone="info" size="sm">Info</Badge>
+      <span class="chip">Chip</span>
+      <CurrencyPill kind="coins" amount={1250} />
+      <CurrencyPill kind="gems" amount={40} />
+    </div>
+  </Card>
+
+  <Card title="Cifras" icon="chart">
+    <div class="ui-stats">
+      <StatTile value={12} label="Victorias" icon="trophy" />
+      <StatTile value="78%" label="Felicidad" />
+      <StatTile value={3} label="Amigos" icon="users" />
+    </div>
+  </Card>
+
+  <Card title="Vacío y carga" icon="wait">
+    <EmptyState icon="gift" title="Aún no hay cofres" text="Gana combates para conseguir el primero." />
+    <EmptyState icon="users" text="Sin amigos conectados" compact />
+    <Skeleton rows={2} height={44} />
   </Card>
 
   <Card title="Diálogos" icon="chat">

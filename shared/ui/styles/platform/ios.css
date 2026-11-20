@@ -200,6 +200,23 @@
   color: var(--bg);
 }
 
+/* Interruptores dentro de una lista: filas del grupo, sin su marco de tarjeta. */
+:root[data-platform='ios'] .ui-list > .ui-switch {
+  position: relative;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding-inline: var(--list-inset);
+}
+:root[data-platform='ios'] .ui-list > * + .ui-switch::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: calc(var(--list-inset) + 36px);
+  border-top: 1px solid var(--line-soft);
+}
+
 /* Lista agrupada: un bloque redondeado y separadores que empiezan tras el icono. */
 :root[data-platform='ios'] .ui-list {
   gap: 0;
@@ -331,6 +348,138 @@
 :root[data-platform='ios'] .textarea:focus {
   outline: 0;
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+/* Etiquetas, chips y monedas: cápsulas rellenas, sin contorno. */
+:root[data-platform='ios'] .ui-badge,
+:root[data-platform='ios'] .chip,
+:root[data-platform='ios'] .tag,
+:root[data-platform='ios'] .ui-currency {
+  border: 0;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+:root[data-platform='ios'] .chip,
+:root[data-platform='ios'] .tag,
+:root[data-platform='ios'] .ui-currency {
+  background: color-mix(in srgb, var(--ink) 8%, var(--surface));
+}
+:root[data-platform='ios'] .ui-badge--neutral {
+  background: color-mix(in srgb, var(--ink) 8%, var(--surface));
+}
+:root[data-platform='ios'] .ui-currency {
+  padding: 4px var(--space-3);
+}
+:root[data-platform='ios'] .ui-currency--plain {
+  padding: 0;
+  background: transparent;
+}
+
+/* Barra de progreso (UIProgressView): fina, sin contorno, pista gris e indicador del acento. */
+:root[data-platform='ios'] .ui-progress {
+  --progress-h: 4px;
+  border: 0;
+  background: color-mix(in srgb, var(--ink) 12%, transparent);
+}
+:root[data-platform='ios'] .ui-progress--sm {
+  --progress-h: 3px;
+}
+:root[data-platform='ios'] .ui-progress--lg {
+  --progress-h: 8px;
+}
+:root[data-platform='ios'] .ui-progress > i {
+  background: var(--progress-c, var(--accent));
+  transition-timing-function: var(--ease-standard);
+}
+
+/* Deslizador (UISlider): pista gris de 4, tramo del acento y pulgar blanco grande con sombra. */
+:root[data-platform='ios'] .ui-slider {
+  min-height: var(--row-min-h);
+  border: 0;
+  border-radius: 12px;
+}
+:root[data-platform='ios'] .ui-slider input[type='range'] {
+  height: var(--hit-min);
+}
+:root[data-platform='ios'] .ui-slider input[type='range']::-webkit-slider-runnable-track {
+  height: 4px;
+  border: 0;
+  background: linear-gradient(to right, var(--accent) var(--fill), color-mix(in srgb, var(--ink) 14%, var(--surface)) var(--fill));
+}
+:root[data-platform='ios'] .ui-slider input[type='range']::-webkit-slider-thumb {
+  width: 28px;
+  height: 28px;
+  margin-top: -12px;
+  border: 0;
+  background: var(--color-paper-white);
+  box-shadow: var(--shadow-2);
+}
+:root[data-platform='ios'] .ui-slider input[type='range']::-moz-range-track {
+  height: 4px;
+  background: color-mix(in srgb, var(--ink) 14%, var(--surface));
+}
+:root[data-platform='ios'] .ui-slider input[type='range']::-moz-range-progress {
+  height: 4px;
+}
+:root[data-platform='ios'] .ui-slider input[type='range']::-moz-range-thumb {
+  width: 28px;
+  height: 28px;
+  border: 0;
+  background: var(--color-paper-white);
+  box-shadow: var(--shadow-2);
+}
+
+/* Cifras: bloque liso de esquinas 12, cifra grande en negrita. */
+:root[data-platform='ios'] .ui-stat {
+  padding: var(--space-3) var(--space-2);
+  border: 0;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--ink) 6%, var(--surface));
+}
+:root[data-platform='ios'] .ui-stat__value {
+  font-size: var(--text-subheading);
+  font-weight: var(--font-weight-bold);
+}
+
+/* Estado vacío (ContentUnavailableView): sin marco, icono grande sin contorno y texto gris. */
+:root[data-platform='ios'] .ui-empty {
+  gap: var(--space-2);
+  padding: var(--space-8) var(--space-4);
+  border: 0;
+  font-size: var(--text-body);
+}
+:root[data-platform='ios'] .ui-empty__icon {
+  width: 60px;
+  height: 60px;
+  border: 0;
+  background: transparent;
+  color: var(--ink-muted);
+}
+:root[data-platform='ios'] .ui-empty__icon svg {
+  width: 40px;
+  height: 40px;
+}
+:root[data-platform='ios'] .ui-empty strong {
+  display: block;
+  margin-bottom: var(--space-1);
+  font-size: var(--text-title);
+  font-weight: var(--font-weight-bold);
+}
+:root[data-platform='ios'] .ui-empty--compact {
+  padding: var(--space-3);
+}
+:root[data-platform='ios'] .ui-empty--compact .ui-empty__icon {
+  width: 28px;
+  height: 28px;
+}
+:root[data-platform='ios'] .ui-empty--compact .ui-empty__icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Esqueleto de carga: esquinas de grupo de iOS. */
+:root[data-platform='ios'] .ui-skel {
+  border-radius: 10px;
 }
 
 @keyframes ui-ios-sheet {

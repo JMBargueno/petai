@@ -351,6 +351,132 @@
   box-shadow: inset 0 0 0 1px var(--accent);
 }
 
+/* Etiquetas, chips y monedas: chips M3 de esquinas 8, contorno fino y peso medio. */
+:root[data-platform='android'] .ui-badge,
+:root[data-platform='android'] .chip,
+:root[data-platform='android'] .tag,
+:root[data-platform='android'] .ui-currency {
+  border-color: var(--line-soft);
+  border-radius: var(--radius-sm);
+  font-weight: var(--font-weight-medium);
+  letter-spacing: 0.01em;
+}
+:root[data-platform='android'] .ui-badge {
+  padding: 2px var(--space-2);
+  line-height: 1.5;
+}
+:root[data-platform='android'] .ui-badge--solid {
+  border-color: transparent;
+}
+:root[data-platform='android'] .ui-currency {
+  min-height: 32px;
+  padding: 0 var(--space-3);
+}
+:root[data-platform='android'] .ui-currency--plain {
+  min-height: 0;
+  padding: 0;
+}
+
+/* Barra de progreso lineal M3: fina, sin contorno, pista tonal e indicador del acento. */
+:root[data-platform='android'] .ui-progress {
+  --progress-h: 6px;
+  border: 0;
+  background: color-mix(in srgb, var(--progress-c, var(--accent)) 22%, var(--surface-2));
+}
+:root[data-platform='android'] .ui-progress--sm {
+  --progress-h: 4px;
+}
+:root[data-platform='android'] .ui-progress--lg {
+  --progress-h: 10px;
+}
+:root[data-platform='android'] .ui-progress > i {
+  background: var(--progress-c, var(--accent));
+  transition-timing-function: var(--ease-standard);
+}
+
+/* Deslizador M3: fila sin tarjeta, pista de 4 y pulgar redondo del acento. */
+:root[data-platform='android'] .ui-slider {
+  min-height: var(--row-min-h);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding-inline: 0;
+}
+:root[data-platform='android'] .ui-slider input[type='range'] {
+  height: var(--hit-min);
+}
+:root[data-platform='android'] .ui-slider input[type='range']::-webkit-slider-runnable-track {
+  height: 4px;
+  border: 0;
+  background: linear-gradient(to right, var(--accent) var(--fill), color-mix(in srgb, var(--accent) 24%, var(--surface-2)) var(--fill));
+}
+:root[data-platform='android'] .ui-slider input[type='range']::-webkit-slider-thumb {
+  width: 20px;
+  height: 20px;
+  margin-top: -8px;
+  border: 0;
+  background: var(--accent);
+  box-shadow: none;
+}
+:root[data-platform='android'] .ui-slider input[type='range']:active::-webkit-slider-thumb {
+  box-shadow: 0 0 0 10px color-mix(in srgb, var(--accent) 14%, transparent);
+}
+:root[data-platform='android'] .ui-slider input[type='range']::-moz-range-track {
+  height: 4px;
+  background: color-mix(in srgb, var(--accent) 24%, var(--surface-2));
+}
+:root[data-platform='android'] .ui-slider input[type='range']::-moz-range-progress {
+  height: 4px;
+}
+:root[data-platform='android'] .ui-slider input[type='range']::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border: 0;
+  background: var(--accent);
+}
+
+/* Cifras: contenedor tonal de esquinas 12, cifra en "title large". */
+:root[data-platform='android'] .ui-stat {
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-2);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+}
+:root[data-platform='android'] .ui-stat__value {
+  font-size: var(--text-subheading);
+  font-weight: var(--font-weight-medium);
+}
+
+/* Estado vacío: sin borde discontinuo; icono en círculo tonal y título "title medium". */
+:root[data-platform='android'] .ui-empty {
+  gap: var(--space-3);
+  padding: var(--space-6) var(--space-4);
+  border: 0;
+  font-size: var(--text-body);
+}
+:root[data-platform='android'] .ui-empty__icon {
+  width: 56px;
+  height: 56px;
+  border: 0;
+}
+:root[data-platform='android'] .ui-empty strong {
+  font-size: var(--text-body-lg);
+  font-weight: var(--font-weight-medium);
+}
+:root[data-platform='android'] .ui-empty--compact {
+  padding: var(--space-3);
+}
+:root[data-platform='android'] .ui-empty--compact .ui-empty__icon {
+  width: 32px;
+  height: 32px;
+}
+
+/* Esqueleto de carga: esquinas de tarjeta M3. */
+:root[data-platform='android'] .ui-skel {
+  border-radius: var(--radius-md);
+}
+
 @keyframes ui-sheet-up {
   from {
     transform: translateY(100%);
