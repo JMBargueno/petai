@@ -31,19 +31,19 @@ fases de abajo y en las secciones de verificación del final.
 - **Fase 4, primer tramo, fusionado** (PR 210). El shell de Tauri es una librería con entrada para
   móvil, el proyecto Android está generado y versionado, y la app arranca en el emulador.
 - **Biblioteca `@pockai/ui`, fusionada** (PR 211 y 212). Contiene el kit (20 componentes), los
-  estilos y dieciocho pantallas de dominio: Tienda, Mochila, Inicio, Cuenta, Eclosión, Misiones,
+  estilos y diecinueve pantallas de dominio: Tienda, Mochila, Inicio, Cuenta, Eclosión, Misiones,
   Vínculo, Temporada, Cofres, Raid, Torneo, Entrenamiento y (rama `claude/pantallas-sprites`)
-  Armario, Arena, Cocina, Minijuegos, Aventura y Perfil. Las usan el escritorio y la app de Android.
+  Armario, Arena, Cocina, Minijuegos, Aventura, Perfil y Amigos. Las usan el escritorio y la app de Android.
 - **Motor de sprites compartido** (rama `claude/pantallas-sprites`): `@pockai/scene/sprites`, con
   `PetMiniAvatar` y `EggSprite` en `@pockai/ui`.
 - **App de Android (`apps/android`)**: Mascota (Inicio, Vínculo, Huevos, Armario), Mochila, Jugar
   (Minijuegos, Arena, Raid, Torneo, Entrenar, Cocina, Aventura), Tienda (Tienda, Cofres), Progreso (Misiones, Temporada) y Cuenta
-  (Cuenta, Perfil; desde el nombre de la cabecera). Jugar, Cofres, Armario y Perfil aún no se han
+  (Cuenta, Perfil, Amigos; desde el nombre de la cabecera). Jugar, Cofres, Armario, Perfil y Amigos aún no se han
   probado en el emulador.
 
 ### Qué falta, por orden
 
-1. **Probar en el emulador** Jugar entera, Cofres, Armario, Perfil y el huevo de sprites.
+1. **Probar en el emulador** Jugar entera, Cofres, Armario, Perfil, Amigos y el huevo de sprites.
 2. **Más pantallas a la biblioteca** (4.4 y 4.5), por tramos según la tabla de abajo. Decidido:
    el motor de sprites se comparte (no un hueco por app).
 3. **iOS** (4.2, 4.3, 4.6): `tauri ios init`, `tauri.ios.conf.json` y `apps/ios`. Necesita un Mac.
@@ -58,7 +58,7 @@ fases de abajo y en las secciones de verificación del final.
 | Tipo | Pantallas | Qué las ata al escritorio | Cómo se mueven |
 |---|---|---|---|
 | (a) Sprites, datos estáticos y sonido | Hechas todas: Armario, Arena, Cocina, Minijuegos y Aventura | — | Patrón de siempre; los efectos de un juego van por el puerto de sonido (`setUiSound`) |
-| (b) Estado de pantalla alimentado por tiempo real | Amigos, Visitas, Clanes | `visitors.ts`, `clan-store.ts`, `activeVisit`, `visitTravel` (se quedaron en la UI en la fase 3) | Antes, decidir si ese estado sube al núcleo; sin eso, Android no tiene de dónde leerlo |
+| (b) Estado de pantalla alimentado por tiempo real | Visitas, Clanes (Amigos hecha) | Las escenas: sala del amigo (`FriendRoomView`/`IsoRoomView`), `HomeScene`, `ClanHabitat`; `activeVisit` y `visitTravel` | Decidido: feed social compartido, no núcleo (ver «Lo social: decisión»). Las escenas, en un hueco de momento |
 | (c) Funciones del escritorio | Chat/IA, Mente, partes de Hábitat | `hermesLocal`, `aiCli`, `deskContext`, `desktopSkillsStore`, `initiative`, `brain`, arrastre de ventana | No van enteras: frontera de la spec 43. El móvil tendrá su contenedor o una vista reducida con huecos |
 | (d) Perfil | Hecha | — | — |
 
@@ -671,3 +671,40 @@ escritorio y UI de Android.
 
 **Sin verificar:** nada de esto en el emulador; en Android, que el perfil se recargue al
 desbloquear un logro (allí solo carga al abrirlo).
+
+### Lo social: decisión y Amigos (2026-11-20)
+
+**Decisión: el estado social no sube al núcleo; se comparte en TypeScript.** Los visitantes de tu
+hábitat, el chat y los objetivos de clan son estado de pantalla: sin persistencia ni reglas, y casi
+toda su lógica ya era pura. Lo que faltaba en Android no era dónde guardarlo sino quién lo llenara,
+y el núcleo ya reenvía todos los eventos de tiempo real a cualquier UI (`onRealtime`). Llevarlo a
+Rust habría sido modelar visitantes, mensajes y objetivos (estado, eventos y tipos generados) sin
+que nada fuera de la pantalla lo consuma. Si la fase 5 necesita algo fuera de la pantalla, se sube
+esa pieza entonces, como la visita en curso, que sigue prevista para la fase 5.
+
+- **`@pockai/ui/social`**: los tipos de lo social (`types.ts`, antes en el `api.ts` del
+  escritorio, que ahora los reexporta), los stores y su lógica (`visitors.ts`, `clans.ts`, antes en
+  `desktop/src/lib`, que conserva sus rutas) y `connectSocialFeed(on)`, que suscribe los eventos
+  `habitat:*` y `clan:*` y escribe en los stores. Cada app le pasa su fuente: el escritorio, su
+  socket (también en el modo demo); Android, `onRealtime` (en `core.ts`, que reparte los eventos por
+  nombre y vacía los stores al cerrar sesión).
+- **Lo propio del escritorio** sigue en `App.svelte`, colgado de los mismos eventos: la reacción de
+  la mascota a una visita, los avisos del sistema, la celebración del objetivo de clan y el viaje
+  por el portal (`visitTravel`).
+- **Amigos**: `FriendsView` en la biblioteca (con `handle.ts`, la validación del nickname);
+  `FriendsTab` como contenedor, que conserva su ventana de perfil. En Android, `FriendsScreen`
+  en Cuenta › Amigos (no queda hueco en la barra), con su propia ventana de perfil sobre
+  `ProfileView` y sin «Visitar» (`canVisit={false}`) hasta que llegue Visitas.
+- **Android** compila ahora con los tipos de Vite (`vite/client` en su `tsconfig`): `core.ts` importa
+  el motor de sprites a través de lo social, y `tsc` necesita entender `import.meta.glob` y los PNG.
+
+Verificado en el escritorio en modo demo: Amigos (solicitudes, presencia, «1 en línea»); un
+nickname mal escrito se avisa sin preguntar al servidor; pedir amistad a @lucia (el campo se vacía);
+aceptar a Dani; abrir el perfil de Marta con «Visitar». 438 tests del escritorio (con los de
+`visitors` y `clan-store` sobre las rutas de siempre); compilan escritorio y UI de Android.
+
+**Sin verificar:** nada de esto en el emulador; que un visitante o un mensaje de clan llegue en
+vivo por el feed (el modo demo no emite esos eventos).
+
+**Siguiente:** Visitas y Clanes. Llevan escenas (la sala del amigo, la escena de casa, el hábitat
+del clan) que de momento irán en un hueco que rellena el escritorio.

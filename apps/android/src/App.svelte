@@ -7,6 +7,7 @@
   import BondingScreen from './screens/BondingScreen.svelte';
   import ChestsScreen from './screens/ChestsScreen.svelte';
   import CookingScreen from './screens/CookingScreen.svelte';
+  import FriendsScreen from './screens/FriendsScreen.svelte';
   import MinigamesScreen from './screens/MinigamesScreen.svelte';
   import MissionsScreen from './screens/MissionsScreen.svelte';
   import ProfileScreen from './screens/ProfileScreen.svelte';
@@ -35,10 +36,11 @@
   let progressSection = $state<'missions' | 'season'>('missions');
   let playSection = $state<'games' | 'arena' | 'raid' | 'tournament' | 'training' | 'cooking' | 'adventure'>('games');
   let shopSection = $state<'store' | 'chests'>('store');
-  let accountSection = $state<'account' | 'profile'>('account');
+  let accountSection = $state<'account' | 'profile' | 'friends'>('account');
   const ACCOUNT_SECTIONS = [
     { value: 'account', label: 'Cuenta', icon: 'user' },
     { value: 'profile', label: 'Perfil', icon: 'trophy' },
+    { value: 'friends', label: 'Amigos', icon: 'users' },
   ];
   const PLAY_SECTIONS = [
     { value: 'games', label: 'Minijuegos', icon: 'gamepad' },
@@ -253,6 +255,8 @@
         <Segmented variant="pills" label="Sección de Cuenta" value={accountSection} options={ACCOUNT_SECTIONS} on:change={(e) => (accountSection = e.detail)} />
         {#if accountSection === 'profile'}
           <ProfileScreen />
+        {:else if accountSection === 'friends'}
+          <FriendsScreen />
         {:else}
           <AccountView user={$core.user} on:logout={leave} />
         {/if}
