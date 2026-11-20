@@ -3,7 +3,7 @@
 Este documento describe qué pantallas y opciones debe tener cada cliente de PetAI: la **app de móvil** (Android e iOS) y la **app de ordenador** (Tauri, Windows y macOS). Sirve de guía para construir la interfaz de las features que el backend ya ofrece y aún no tienen pantalla.
 
 - Las rutas citadas son las del backend en `main` (prefijo `/v1`), comprobadas contra los controladores.
-- El estado «Existe» se ha comprobado contra el código de `desktop/src` y `mobile/android`, no contra documentación anterior.
+- El estado «Existe» se comprobó contra el código de `desktop/src` y de la app Kotlin de entonces (`mobile/android`), no contra documentación anterior. Esa app se retiró el 2026-11-20; la de Android es ahora `apps/android` (Tauri), con todo lo que tenía la Kotlin.
 - Fecha: 14 de noviembre de 2026.
 
 ## 1. Cómo leer este documento
@@ -366,7 +366,7 @@ El borrado de cuenta es requisito de las tiendas de apps y del RGPD, y no existe
 
 | Elemento | Qué hace | Estado |
 |---|---|---|
-| Widget de pantalla de inicio | Sprite, nombre y vitales de la mascota activa; toque para abrir | ✅ Android (Glance 4×2) |
+| Widget de pantalla de inicio | Sprite, nombre y vitales de la mascota activa; toque para abrir | ✅ Android (4×2) |
 | Notificaciones locales | Avisos de cuidados calculados en el dispositivo | ✅ Android (cada ~30 min) |
 | Notificaciones push | Combate recibido, regalo, recordatorio, misión completada, mensaje de la mascota | ⬜ (falta FCM y APNs) |
 | Live Activity (iOS) | Cuenta atrás de eclosión en la isla dinámica | ⬜ |

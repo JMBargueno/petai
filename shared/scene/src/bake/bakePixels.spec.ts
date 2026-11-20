@@ -137,7 +137,7 @@ describe('bakePixels', () => {
 });
 
 describe('prng', () => {
-  it('Mulberry32 es determinista (misma secuencia que Kotlin/Swift)', () => {
+  it('Mulberry32 es determinista (misma secuencia que Swift)', () => {
     const r = createMulberry32(1337);
     expect([r(), r(), r()].map((v) => v.toFixed(8))).toEqual(
       (() => {

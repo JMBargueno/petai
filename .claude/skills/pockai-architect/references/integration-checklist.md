@@ -25,8 +25,7 @@ Rutas relativas a la raíz del repo. Marca cada paso en el resumen final.
    Para cada archivo decide:
    - **Registro** (debe listar todas las especies): edítalo. Conocidos:
      - `desktop/src/lib/sprites.ts` — imports de `base.png`/`mask.png`/`anim.json` y `<id>_idle.svg?raw`, `SPECIES_REGISTRY`, `PREVIEW_SVG`.
-     - `mobile/android/.../ui/habitat/HabitatScreen.kt` — `KNOWN_SPRITE_KEYS`.
-     - Revisa también `desktop/src/lib/visitors.ts`, `desktop/src/components/PetMiniAvatar.svelte`, `PetView.svelte`, `mobile/android/.../data/Models.kt`, `backend/src/modules/assets/*`.
+     - Revisa también `desktop/src/lib/visitors.ts`, `desktop/src/components/PetMiniAvatar.svelte`, `PetView.svelte`, `backend/src/modules/assets/*`. Android usa las mismas piezas de `@pockai/ui` y `@pockai/scene`.
    - **Ejemplo/decorado** (landing, 404, lore, OG, fallbacks a `ignisaur`, scripts de sprites): no lo toques.
    Indica en el resumen qué clasificaste como cada cosa.
 

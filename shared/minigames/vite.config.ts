@@ -26,8 +26,8 @@ const sharedAssets = (): Plugin => ({
 /**
  * - `pnpm --filter @pockai/minigames dev` → página embed (`/?demo=catch_food` para probar un juego).
  * - `pnpm --filter @pockai/minigames build:embed` → `dist/embed/`, bundle autocontenido con rutas
- *   relativas para copiarlo a los assets de Android y al bundle de iOS.
- * El escritorio no usa este build: importa `@pockai/minigames` como código fuente.
+ *   relativas para incrustarlo en una app nativa.
+ * El escritorio y Android (Tauri) no usan este build: importan `@pockai/minigames` como código fuente.
  */
 export default defineConfig({
   base: './',

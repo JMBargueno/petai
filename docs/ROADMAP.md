@@ -13,7 +13,7 @@ Este documento detalla el desglose por fases, los hitos clave, los entregables d
 | **Fase 2** | Mecánicas de Juego | ✅ Completada | Minijuegos, tienda, evolución y estados de salud |
 | **Fase 3** | Inteligencia Artificial (IA) | ✅ Completada (salvo modo suscripción y Redis) | Conexión BYOK/Hermes, streaming SSE, memoria y herramientas |
 | **Fase 4** | Peleas Asíncronas | ✅ Completada (falta fin de temporada) | Motor determinista, emparejamiento ELO y repeticiones |
-| **Fase 5** | Clientes Móviles Nativos | ✅ Android (salvo Play Billing/FCM) · ⏳ iOS pendiente | Android (Jetpack Compose M3) e iOS (SwiftUI Liquid Glass) |
+| **Fase 5** | Clientes Móviles Nativos | ✅ Android (salvo Play Billing/FCM) · ⏳ iOS pendiente | Android (Tauri + Svelte, núcleo en Rust) e iOS (pendiente) |
 | **Fase 6** | Pulido y Lanzamiento | 🚧 Hecho lo técnico; pendiente lo que depende de cuentas externas | Seguridad, balance, optimización, tiendas y despliegue |
 | **Fase 7** | Funcionalidades Expandidas | 🚧 Oleada 1 completada; oleadas 2 y 3 en el backend con tests de backend crecientes, sin consumo desde clientes | 33 nuevas features (hábito, meta, IA, comunidad y ecosistema) |
 
@@ -98,13 +98,12 @@ Este documento detalla el desglose por fases, los hitos clave, los entregables d
 ---
 
 ## Fase 5 — Clientes Móviles Nativos
-- **Android** (`mobile/android`): Jetpack Compose con Material 3 Expressive, widgets Glance y Play Billing.
-  - [x] v1 «núcleo + chat»: registro/login (tokens cifrados con Android Keystore, refresh automático), eclosión, estado y cuidados de la mascota con sprites SVG compartidos, tienda, chat IA con streaming SSE y ajustes BYOK. Probado en emulador (API 37) contra el backend local (`10.0.2.2:3000`).
-  - [x] v2: pestaña «Jugar» (Arena con combate asíncrono, repetición y clasificación; minijuegos Atrapa la comida, Parejas de memoria y Reflejos validados por el servidor), vinculación del escritorio con código de 6 dígitos (`/auth/device/*`), widget Glance 4×2 y avisos locales de cuidados con WorkManager (cada ~30 min, sin FCM).
+- **Android**: la app de Tauri (`apps/android`, UI en Svelte con `@pockai/ui` y el núcleo cliente en Rust). Sustituye a la app Kotlin con Jetpack Compose, retirada el 2026-11-20 (ver `docs/MIGRACION_NUCLEO_RUST.md`).
+  - [x] Todo lo que tenía la app Kotlin: cuenta (alta, verificación, nickname, recuperar la contraseña), eclosión, cuidados, tienda y cofres, Jugar, chat IA con clave propia, widget de la pantalla de inicio, avisos de cuidado con WorkManager y sesión cifrada con el Keystore.
   - [ ] Pendiente (requiere cuentas externas): Play Billing (Play Console + endpoint de verificación de compras en el backend) y push con FCM (proyecto de Firebase y `google-services.json`).
-  - Build: `cd mobile/android && ./gradlew assembleDebug`. En Windows con JDK 25 hace falta `-Djdk.net.unixdomain.tmpdir=C:/t` (ya en `gradle.properties`; exportarlo también en `JAVA_TOOL_OPTIONS` para el cliente de Gradle) y que exista `C:\\t`.
+  - Build: ver «Compilar para Android en Windows» en `docs/MIGRACION_NUCLEO_RUST.md`.
 - **iOS**: SwiftUI con Liquid Glass para iOS 27, Live Activities y StoreKit 2.
-- **Sincronización**: Código de vinculación de dispositivos para sincronizar escritorio y móviles.
+- **Sincronización**: la misma cuenta en todos los dispositivos. La vinculación por código (`/auth/device/*`) está en el backend, pero ningún cliente la inicia.
 
 ---
 

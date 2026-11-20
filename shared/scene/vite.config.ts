@@ -3,8 +3,8 @@ import { defineConfig } from 'vite';
 /**
  * - `pnpm --filter @pockai/scene dev` → servidor con la página embed (`/?demo` para el panel).
  * - `pnpm --filter @pockai/scene build:embed` → `dist/embed/`, bundle autocontenido con rutas
- *   relativas para copiarlo a `assets/scene/` de Android y al bundle de iOS.
- * El escritorio no usa este build: importa `@pockai/scene` como código fuente.
+ *   relativas para incrustarlo en una app nativa.
+ * El escritorio y Android (Tauri) no usan este build: importan `@pockai/scene` como código fuente.
  */
 export default defineConfig({
   base: './',

@@ -553,25 +553,8 @@ Es la referencia: aplica todo lo anterior con tokens en `tokens.css`, componente
 - **Tema:** por defecto sigue al sistema. En Ajustes › Escritorio se puede forzar claro u oscuro; se aplica con `data-theme` en `<html>`, que solo cambia `color-scheme` (los tokens `light-dark()` hacen el resto).
 - **Diálogos:** usan `Modal` (o la acción `focusTrap`): el foco entra al abrir, no sale con Tab y vuelve al cerrar.
 
-### Android (`mobile/android`, Compose)
-- `MaterialExpressiveTheme` con la paleta de marca. El **color dinámico va desactivado por defecto** (como mucho, una opción en Ajustes).
-- Mapeo de roles:
-
-| Rol M3 | Claro | Oscuro |
-|---|---|---|
-| `primary` | `#5c4ade` | `#b3a8ff` |
-| `onPrimary` | `#ffffff` | `#0b0a14` |
-| `secondary` | `#4da2ff` | `#4da2ff` |
-| `tertiary` | `#ffd731` | `#ffd731` |
-| `background` | `#fbfaff` | `#0d0c19` |
-| `surface` | `#ffffff` | `#17162a` |
-| `surfaceVariant` | `#f2f1f8` | `#201e37` |
-| `onSurface` | `#0b0a14` | `#f4f2ff` |
-| `onSurfaceVariant` | `#4b4862` | `#b9b5d8` |
-| `outline` | `#0b0a14` | `#3d3a63` |
-| `error` | `#b33200` | `#fb4903` |
-
-- Añadir un `Type.kt` (§4) y un `Shape.kt` con radios small 16, medium 20, large 28 y extraLarge 32 dp.
+### Android (`apps/android`)
+- Es la misma app de Tauri que el escritorio: usa los tokens y el kit de `@pockai/ui` con el aspecto de Android (modo de plataforma), así que la paleta y la tipografía son las del escritorio.
 - Icono adaptativo: el huevo de marca (§2) con capa monocroma.
 
 ### iOS (pendiente)
