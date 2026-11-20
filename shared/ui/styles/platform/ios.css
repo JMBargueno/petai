@@ -22,6 +22,12 @@
   --sheet-radius: 12px;
   --dialog-radius: 14px;
 
+  /* Vidrio: el desenfoque es moderado a propósito. Subirlo lo convierte en escarcha opaca y tapa el
+     contenido; la saturación es la que hace que el color de debajo se refracte en vez de lavarse.
+     Los colores son del tema (`--glass-*`). */
+  --ios-glass-blur: 16px;
+  --ios-glass-saturate: 1.8;
+
   --row-min-h: 44px;
   --list-inset: 16px;
 
@@ -196,14 +202,70 @@
   scale: 1;
   opacity: var(--press-opacity);
 }
+/* Pastillas de vidrio: flotan sobre el contenido en vez de taparlo. La activa sí es sólida, que es
+   lo único que debe destacar. */
 :root[data-platform='ios'] .ui-pills button {
+  position: relative;
+  isolation: isolate;
   border: 0;
-  background: color-mix(in srgb, var(--ink) 8%, transparent);
   font-weight: var(--font-weight-medium);
 }
 :root[data-platform='ios'] .ui-pills button.active {
   background: var(--ink);
   color: var(--bg);
+  box-shadow: var(--shadow-2);
+}
+/* Sin vidrio detrás, la pastilla activa no necesita filo ni lustre. */
+:root[data-platform='ios'] .ui-pills button.active::before {
+  display: none;
+}
+
+/* ─── Vidrio (Liquid Glass) ────────────────────────────────────────────────────────────────────
+   La receta, en un solo sitio, para todas las láminas de iOS: la cabecera fija, la barra de
+   pestañas flotante, las pastillas de sección y las alertas. Dónde flota cada una y con qué radio
+   es cosa suya; esto es solo el material.
+
+   Tres capas la hacen parecer vidrio y no un panel translúcido:
+   1. `backdrop-filter` con saturación: el color de debajo se refracta y se aviva en vez de lavarse.
+      El desenfoque es moderado a propósito; subirlo lo vuelve escarcha opaca y tapa el contenido.
+   2. Un filo oscuro de media línea (`--glass-edge`) que la separa del fondo, y una línea especular
+      arriba (`--glass-specular`) que simula el canto iluminado. Media línea: nada de biseles.
+   3. Un lustre diagonal en `::before` fundido con `overlay`, que reacciona al color de debajo en
+      vez de pintar encima. Cada lámina lo encierra con `isolation: isolate`.
+
+   Los colores son del tema (`--glass-*` en tokens.css): aquí no hay ninguno, que es la regla. */
+:root[data-platform='ios'] :is(header, nav.tabbar, .ui-pills button:not(.active), .ui-modal--dialog) {
+  background: var(--glass-tint);
+  backdrop-filter: blur(var(--ios-glass-blur)) saturate(var(--ios-glass-saturate));
+  -webkit-backdrop-filter: blur(var(--ios-glass-blur)) saturate(var(--ios-glass-saturate));
+  box-shadow:
+    inset 0 0 0 0.5px var(--glass-edge),
+    inset 0 0.5px 0 var(--glass-specular);
+}
+:root[data-platform='ios'] :is(nav.tabbar, .ui-pills button, .ui-modal--dialog)::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  corner-shape: inherit;
+  background: linear-gradient(140deg, var(--glass-sheen), transparent 42%, transparent 68%, var(--glass-sheen));
+  mix-blend-mode: overlay;
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root[data-platform='ios'] :is(nav.tabbar, .ui-pills button, .ui-modal--dialog)::before {
+    display: none;
+  }
+}
+
+/* Curvas de Apple (squircle) donde el navegador las dé: la esquina se cierra con una continuidad
+   que el radio redondo no tiene, y es lo que distingue una tarjeta de iOS de una caja redondeada.
+   Mejora progresiva: donde no exista, queda el radio de siempre. */
+@supports (corner-shape: squircle) {
+  :root[data-platform='ios'] :is(.ui-card, .ui-pills button, .ui-seg, .btn, .ui-modal--dialog, nav.tabbar) {
+    corner-shape: squircle;
+  }
 }
 
 /* Interruptores dentro de una lista: filas del grupo, sin su marco de tarjeta. */
