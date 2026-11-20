@@ -52,6 +52,7 @@ describe('PetsService', () => {
   // Vínculo (feature 006): mock del BondingService
   const mockBondingService = {
     recordInteraction: jest.fn().mockResolvedValue({ bonding: 0, bondingTier: 'acquainted', tierChanged: null }),
+    petCooldownRemaining: jest.fn().mockResolvedValue(0),
     applyDecay: jest.fn().mockResolvedValue({ decayed: false, bonding: 0, bondingTier: 'acquainted', delta: 0 }),
     bondingFields: jest.fn().mockReturnValue({
       bonding: 0,
@@ -424,6 +425,70 @@ describe('PetsService', () => {
       );
       expect(mockRealtimeGateway.emitPetUpdate).toHaveBeenCalled();
       expect((res as any).inHabitat).toBe(true);
+    });
+  });
+
+  describe('caress', () => {
+    const despierta = {
+      id: 'p1',
+      userId: 'u1',
+      nickname: 'Brasa',
+      happiness: 60,
+      sleeping: false,
+      xp: 0,
+      level: 1,
+      statPoints: 0,
+      stage: 'baby',
+    };
+
+    beforeEach(() => {
+      // El `beforeEach` de fuera recompila el módulo pero no borra el historial de los mocks, que
+      // son compartidos: sin esto, las llamadas de los tests anteriores cuentan como propias.
+      jest.clearAllMocks();
+      mockBondingService.petCooldownRemaining.mockResolvedValue(0);
+      mockPrismaService.pet.update.mockImplementation((args: any) =>
+        Promise.resolve({ ...despierta, ...args.data, id: args.where.id }),
+      );
+    });
+
+    it('sube felicidad, da XP y cuenta como interacción de vínculo', async () => {
+      jest.spyOn(service, 'getPetById').mockResolvedValue(despierta as any);
+
+      const res = await service.caress('u1', 'p1');
+
+      expect(mockPrismaService.pet.update).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { id: 'p1' }, data: expect.objectContaining({ happiness: 65 }) }),
+      );
+      expect(mockBondingService.recordInteraction).toHaveBeenCalledWith('p1', 'u1', 'pet');
+      expect(mockRealtimeGateway.emitPetAction).toHaveBeenCalledWith('u1', 'p1', 'caressed');
+      expect((res as any).xp).toBe(2);
+    });
+
+    it('la felicidad no pasa de 100', async () => {
+      jest.spyOn(service, 'getPetById').mockResolvedValue({ ...despierta, happiness: 98 } as any);
+
+      await service.caress('u1', 'p1');
+
+      expect(mockPrismaService.pet.update).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ happiness: 100 }) }),
+      );
+    });
+
+    it('durmiendo no se acaricia', async () => {
+      jest.spyOn(service, 'getPetById').mockResolvedValue({ ...despierta, sleeping: true } as any);
+
+      await expect(service.caress('u1', 'p1')).rejects.toThrow('mientras duerme');
+      expect(mockPrismaService.pet.update).not.toHaveBeenCalled();
+    });
+
+    it('dentro del cooldown se rechaza sin tocar nada, y el aviso dice cuánto falta', async () => {
+      jest.spyOn(service, 'getPetById').mockResolvedValue(despierta as any);
+      mockBondingService.petCooldownRemaining.mockResolvedValue(5 * 60_000 + 1);
+
+      // Es el único freno que tiene: sin él, gratis e instantánea, subiría el vínculo sin fin.
+      await expect(service.caress('u1', 'p1')).rejects.toThrow('6 min');
+      expect(mockPrismaService.pet.update).not.toHaveBeenCalled();
+      expect(mockBondingService.recordInteraction).not.toHaveBeenCalled();
     });
   });
 });

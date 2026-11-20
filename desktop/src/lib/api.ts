@@ -621,6 +621,16 @@ export const api = {
     return res.data;
   },
 
+  async caressPet(petId: string) {
+    if (CORE) return coreAction({ type: 'pet', petId }, 'Error al acariciar');
+    const res = await client.POST('/v1/pets/{id}/pet', {
+      params: { path: { id: petId } },
+      ...authHeaders(),
+    });
+    if (res.error) throw apiError(res, 'Error al acariciar');
+    return res.data;
+  },
+
   async sleepPet(petId: string) {
     if (CORE) return coreAction({ type: 'sleep', petId }, 'Error al dormir');
     const res = await client.POST('/v1/pets/{id}/sleep', {

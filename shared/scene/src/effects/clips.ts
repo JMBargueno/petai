@@ -41,6 +41,7 @@ function welcomeClips(tier: string | undefined): string[] {
 const TABLE: Record<string, (c: Ctx) => string[] | null> = {
   fed: (c) => (c?.['favorite'] ? ['eat', 'love'] : ['eat']),
   cleaned: () => ['clean', 'happy'],
+  caressed: () => ['love', 'happy'],
   slept: () => [],
   woke: () => ['wake'],
   healed: () => ['heal', 'happy'],

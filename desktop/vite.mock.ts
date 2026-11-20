@@ -579,6 +579,10 @@ const routes: [string, RegExp, Handler][] = [
     return p;
   }],
   ['POST', /^\/pets\/([^/]+)\/clean$/, ({ m }) => Object.assign(findPet(m[1]), { hygiene: 100 })],
+  ['POST', /^\/pets\/([^/]+)\/pet$/, ({ m }) => {
+    const p = findPet(m[1]);
+    return Object.assign(p, { happiness: clamp(p.happiness + 5) });
+  }],
   ['POST', /^\/pets\/([^/]+)\/sleep$/, ({ m }) => Object.assign(findPet(m[1]), { sleeping: true })],
   ['POST', /^\/pets\/([^/]+)\/wake$/, ({ m }) => Object.assign(findPet(m[1]), { sleeping: false })],
   ['PATCH', /^\/pets\/([^/]+)\/in-habitat$/, ({ m, body }) => Object.assign(findPet(m[1]), { inHabitat: !!body.inHabitat })],

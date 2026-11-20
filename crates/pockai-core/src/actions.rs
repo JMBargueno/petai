@@ -30,6 +30,8 @@ pub enum Action {
     /// Dar de comer con un alimento del inventario.
     Feed { pet_id: String, item_id: String },
     Clean { pet_id: String },
+    /// Acariciar: sube el vínculo. El servidor la frena con un cooldown.
+    Pet { pet_id: String },
     Sleep { pet_id: String },
     Wake { pet_id: String },
     /// Curar con una medicina del inventario.
@@ -341,6 +343,7 @@ impl Action {
         match self {
             Action::Feed { pet_id, item_id } => ("POST", pet(pet_id, "feed"), Some(json!({ "itemId": item_id })), true),
             Action::Clean { pet_id } => ("POST", pet(pet_id, "clean"), None, true),
+            Action::Pet { pet_id } => ("POST", pet(pet_id, "pet"), None, true),
             Action::Sleep { pet_id } => ("POST", pet(pet_id, "sleep"), None, true),
             Action::Wake { pet_id } => ("POST", pet(pet_id, "wake"), None, true),
             Action::Heal { pet_id, item_id } => ("POST", pet(pet_id, "heal"), Some(json!({ "itemId": item_id })), true),
@@ -601,6 +604,7 @@ mod tests {
         assert_eq!(call(Action::Clean { pet_id: "../admin".into() }).1, "/v1/pets/..%2Fadmin/clean");
         assert_eq!(call(Action::Clean { pet_id: "..".into() }).1, "/v1/pets/%2E%2E/clean");
         assert_eq!(call(Action::Clean { pet_id: "p1?x=1#y".into() }).1, "/v1/pets/p1%3Fx%3D1%23y/clean");
+        assert_eq!(call(Action::Pet { pet_id: "../admin".into() }).1, "/v1/pets/..%2Fadmin/pet");
         assert_eq!(seg("f87f-4a1b_x.y~z"), "f87f-4a1b_x.y~z");
         assert_eq!(seg("ñandú 1"), "%C3%B1and%C3%BA%201");
     }

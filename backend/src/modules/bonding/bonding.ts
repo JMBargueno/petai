@@ -14,8 +14,14 @@ export interface BondingTier {
 
 /** Configuración del vínculo, leída de `balance.json → bonding` (Constitución VII). */
 export interface BondingConfig {
-  /** Incremento de `bonding` por tipo de interacción (feed, battle, minigame, chat, clean, sleep, evolve). */
+  /** Incremento de `bonding` por tipo de interacción (feed, battle, minigame, chat, clean, sleep, pet, evolve). */
   interactions: Record<string, number>;
+  /**
+   * Minutos que tienen que pasar entre dos caricias que cuenten. Las demás interacciones ya se
+   * frenan solas (la comida gasta un objeto, el baño pide que esté sucia); la caricia es gratis e
+   * instantánea, así que sin este hueco subiría el vínculo sin fin.
+   */
+  petCooldownMinutes?: number;
   /** Puntos de decaimiento por día completo de abandono, una vez superada la ventana de inicio. */
   decayRatePerDay: number;
   /** Horas sin interacción sin decaimiento alguno (ventana de gracia). */
@@ -36,7 +42,7 @@ export const DEFAULT_BONDING_TIER = 'acquainted';
 export const BONDING_TIER_ORDER = ['acquainted', 'companion', 'ally', 'soulmate', 'legend'] as const;
 
 /** Tipos de interacción que suben el vínculo (los que existen en `balance.bonding.interactions`). */
-export type BondingInteractionType = 'feed' | 'battle' | 'minigame' | 'chat' | 'clean' | 'sleep' | 'evolve';
+export type BondingInteractionType = 'feed' | 'battle' | 'minigame' | 'chat' | 'clean' | 'sleep' | 'pet' | 'evolve';
 
 /**
  * Redondea a 2 decimales (el vínculo y el decaimiento se expresan con 2 decimales como máximo;
@@ -109,6 +115,12 @@ export function isBondingTierAtLeast(tier: string | undefined, target: string): 
   if (targetIdx === -1) return false;
   const tierIdx = BONDING_TIER_ORDER.indexOf((tier ?? DEFAULT_BONDING_TIER) as (typeof BONDING_TIER_ORDER)[number]);
   return tierIdx >= targetIdx;
+}
+
+/** Hueco mínimo entre dos caricias, en ms. `0` si el balance no lo declara (sin freno). */
+export function petCooldownMs(cfg: BondingConfig): number {
+  const min = cfg.petCooldownMinutes;
+  return typeof min === 'number' && Number.isFinite(min) && min > 0 ? min * 60_000 : 0;
 }
 
 /** Incremento de `bonding` de una interacción según el balance; `null` si el `type` es desconocido. */

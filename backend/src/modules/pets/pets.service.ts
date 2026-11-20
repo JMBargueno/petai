@@ -176,6 +176,44 @@ export class PetsService {
     return withXp;
   }
 
+  /**
+   * Acariciar: el gesto gratis del inicio de Mascota. Sube felicidad, un poco de XP y el vínculo.
+   *
+   * Lo frena un cooldown y no una condición sobre las constantes, como hace `clean()` con la
+   * higiene: una caricia no gasta nada ni necesita que la mascota esté de ninguna manera, así que
+   * lo único que impide repetirla sin fin para subir el vínculo es el tiempo.
+   */
+  async caress(userId: string, petId: string) {
+    const pet = await this.getPetById(userId, petId);
+    if (pet.sleeping) {
+      throw new BadRequestException('No puedes acariciarla mientras duerme');
+    }
+
+    const remaining = await this.bonding.petCooldownRemaining(petId);
+    if (remaining > 0) {
+      const minutes = Math.ceil(remaining / 60_000);
+      throw new BadRequestException(
+        `${pet.nickname ?? 'Tu Pockai'} ya ha tenido su mimo; vuelve en ${minutes} min`,
+      );
+    }
+
+    const updated = await this.prisma.pet.update({
+      where: { id: petId },
+      data: {
+        happiness: Math.min(100, pet.happiness + 5),
+        lastTickAt: new Date(),
+      },
+      include: { species: true, pattern: true },
+    });
+
+    const withXp = await this.addXpInternal(updated, 2);
+    this.realtimeGateway.emitPetUpdate(userId, withXp);
+    await this.bonding.recordInteraction(petId, userId, 'pet');
+    this.eventEmitter.emit('pet:caressed', { userId, petId });
+    this.realtimeGateway.emitPetAction(userId, petId, 'caressed');
+    return withXp;
+  }
+
   async sleep(userId: string, petId: string) {
     const pet = await this.getPetById(userId, petId);
     if (pet.sleeping) {

@@ -2236,6 +2236,35 @@
         ]
       }
     },
+    "/v1/pets/{id}/pet": {
+      "post": {
+        "operationId": "PetsController_caress",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Acariciar a la mascota (sube vínculo, con cooldown)",
+        "tags": [
+          "Pets"
+        ]
+      }
+    },
     "/v1/pets/{id}/sleep": {
       "post": {
         "operationId": "PetsController_sleep",
