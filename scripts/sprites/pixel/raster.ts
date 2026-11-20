@@ -52,7 +52,13 @@ export function rotateAt(deg: number, x: number, y: number): Mat {
   return [c, s, -s, c, x - c * x + s * y, y - s * x - c * y];
 }
 export const apply = (m: Mat, x: number, y: number): [number, number] => [m[0] * x + m[2] * y + m[4], m[1] * x + m[3] * y + m[5]];
-function invert(m: Mat): Mat {
+
+/**
+ * La inversa de una afín: la usan las elipses y el arte importado, que se deforman recorriendo el
+ * destino y preguntando de qué píxel de origen viene cada uno (al revés, una ampliación dejaría
+ * huecos entre píxel y píxel).
+ */
+export function invert(m: Mat): Mat {
   const det = m[0] * m[3] - m[1] * m[2];
   const a = m[3] / det;
   const b = -m[1] / det;

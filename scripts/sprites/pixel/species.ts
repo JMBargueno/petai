@@ -14,7 +14,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Pose, Stage } from '../species';
 import { drawFace, drawFx, EyeSpec } from './face';
-import { FLOOR, Grid, hex, mul, N, rotateAt, scaleAt, TEX, translate } from './raster';
+import { apply, FLOOR, Grid, hex, invert, mul, N, rotateAt, scaleAt, TEX, translate } from './raster';
 import type { Rgb, Role, Tone } from './raster';
 
 /** Elipse: [cx, cy, rx, ry]. */
@@ -2431,39 +2431,72 @@ function drawImported(art: ImportedStage, p: Pose): Drawn {
     if (y < y0) y0 = y;
     if (y > y1) y1 = y;
   }
-  // El desplazamiento de la pose, en píxeles enteros y sin sacar la criatura del frame.
-  const dx = Math.max(-x0, Math.min(N - 1 - x1, Math.round(p.dx / 2)));
-  const dy = Math.max(-y0, Math.min(N - 1 - y1, Math.round(p.dy / 2)));
-  for (let i = 0; i < N * N; i++) {
-    const ch = frame[i];
-    if (ch === '.') continue;
-    const e = art.legend[ch.charCodeAt(0) - 48];
-    const x = (i % N) + dx;
-    const y = Math.floor(i / N) + dy;
-    if ('lit' in e) g.put(x, y, e.lit, 4);
-    else g.paint(x, y, 4, e.role, e.tone);
+  // El achatado y el estirado de la pose, alrededor del suelo, como en el camino procedural.
+  //
+  // Esto es lo que un mapa de píxeles ya dibujado **sí** puede expresar: una escala en los dos ejes
+  // es duplicar o quitar filas y columnas, que es justo el recurso de siempre del pixel art. El
+  // giro (`p.rot`) se queda fuera a propósito: rotar un bitmap unos pocos grados deja los bordes
+  // escalonados, y en 64 px se nota más el destrozo que el gesto. Lo demás que calcula `poses.ts`
+  // —cola, brazos, ojos, boca— pide partes separadas, y el arte importado viene de una pieza.
+  const shape = scaleAt(q(p.sx, 0.025), q(p.sy, 0.025), N / 2, FLOOR);
+
+  // La caja ya deformada, para que el desplazamiento no saque a la criatura del frame.
+  const esquinas: [number, number][] = [
+    [x0, y0],
+    [x1 + 1, y0],
+    [x0, y1 + 1],
+    [x1 + 1, y1 + 1],
+  ].map(([x, y]) => apply(shape, x, y));
+  const bx0 = Math.floor(Math.min(...esquinas.map((c) => c[0])));
+  const bx1 = Math.ceil(Math.max(...esquinas.map((c) => c[0]))) - 1;
+  const by0 = Math.floor(Math.min(...esquinas.map((c) => c[1])));
+  const by1 = Math.ceil(Math.max(...esquinas.map((c) => c[1]))) - 1;
+  const dx = Math.max(-bx0, Math.min(N - 1 - bx1, Math.round(p.dx / 2)));
+  const dy = Math.max(-by0, Math.min(N - 1 - by1, Math.round(p.dy / 2)));
+
+  // Se recorre el destino y se pregunta de dónde viene cada píxel: al revés, una ampliación dejaría
+  // huecos entre píxel y píxel.
+  const m = mul(translate(dx, dy), shape);
+  const inv = invert(m);
+  for (let y = 0; y < N; y++) {
+    for (let x = 0; x < N; x++) {
+      const [u, v] = apply(inv, x + 0.5, y + 0.5);
+      const su = Math.floor(u);
+      const sv = Math.floor(v);
+      if (su < 0 || su >= N || sv < 0 || sv >= N) continue;
+      const ch = frame[sv * N + su];
+      if (ch === '.') continue;
+      const e = art.legend[ch.charCodeAt(0) - 48];
+      if ('lit' in e) g.put(x, y, e.lit, 4);
+      else g.paint(x, y, 4, e.role, e.tone);
+    }
   }
   p.fx.filter((f) => !f.b).forEach((f) => drawFx(g, f));
   // Anclas de accesorio aproximadas, a partir de la silueta: la cabeza es lo más alto.
   let hx = 0;
   let hn = 0;
   for (let x = 0; x < N; x++) for (let y = y0; y <= y0 + 2; y++) if (frame[y * N + x] !== '.') { hx += x; hn++; }
-  const headX = Math.round(hx / Math.max(1, hn)) + dx;
-  const top = y0 + dy;
-  const h = y1 - y0 + 1;
+  // Las anclas viajan con la misma transformación que el cuerpo: si no, las prendas se quedarían
+  // quietas mientras la criatura se achata.
+  const at = (qp: [number, number]): [number, number] => {
+    const [ax, ay] = apply(m, qp[0], qp[1]);
+    return [Math.max(0, Math.min(N - 1, Math.round(ax))), Math.max(0, Math.min(N - 1, Math.round(ay)))];
+  };
+  const headX = at([Math.round(hx / Math.max(1, hn)), y0])[0];
+  const top = by0 + dy;
+  const h = by1 - by0 + 1;
   if (art.anchors) {
     const a = poseAnchorsOf(art)[key];
     // Siempre dentro del frame: un ancla fuera dejaría la prenda cortada o sin pintar.
-    const at = (q: [number, number]): [number, number] => [Math.max(0, Math.min(N - 1, q[0] + dx)), Math.max(0, Math.min(N - 1, q[1] + dy))];
-    return { grid: g, anchors: { head: at(a.head), face: at(a.face), neck: at(a.neck), back: at(a.back) }, height: FLOOR - y0 };
+    return { grid: g, anchors: { head: at(a.head), face: at(a.face), neck: at(a.neck), back: at(a.back) }, height: FLOOR - (by0 + dy) };
   }
   const anchors: Anchors = {
     head: [headX, top],
     face: [headX + 2, top + Math.round(h * 0.16)],
     neck: [headX - 1, top + Math.round(h * 0.32)],
-    back: [x0 + dx + Math.round((x1 - x0) * 0.3), top + Math.round(h * 0.5)],
+    back: [at([x0, y0])[0] + Math.round((bx1 - bx0) * 0.3), top + Math.round(h * 0.5)],
   };
-  return { grid: g, anchors, height: FLOOR - y0 };
+  return { grid: g, anchors, height: FLOOR - (by0 + dy) };
 }
 
 export function drawPockai(sp: PixelSpecies, st: Stage, p: Pose): Drawn {
