@@ -26,14 +26,14 @@ describe('registro de temas', () => {
   });
 
   it('esquemas, muestra y paleta de canvas completos y en hex', () => {
-    const keys: (keyof CanvasPalette)[] = ['sparkle', 'confetti', 'firefly', 'ember', 'wisp', 'star', 'glowRgb'];
+    const keys: (keyof CanvasPalette)[] = ['sparkle', 'confetti', 'firefly', 'ember', 'wisp', 'star', 'glowRgb', 'nightTint', 'accent'];
     for (const t of THEMES) {
       expect(t.schemes.length, t.id).toBeGreaterThan(0);
       for (const s of t.schemes) {
         expect(t.swatch[s].every((c) => HEX.test(c)), `${t.id} swatch ${s}`).toBe(true);
         const p = t.canvas[s];
         for (const k of keys) expect(p[k], `${t.id}.${s}.${k}`).toBeTruthy();
-        for (const c of [...p.sparkle, ...p.confetti, ...p.ember, ...p.wisp, p.firefly, p.star]) {
+        for (const c of [...p.sparkle, ...p.confetti, ...p.ember, ...p.wisp, p.firefly, p.star, p.nightTint, p.accent, ...(p.ambient ? [p.ambient] : [])]) {
           expect(c, `${t.id}.${s}`).toMatch(HEX);
         }
         expect(p.glowRgb).toMatch(/^\d{1,3}, \d{1,3}, \d{1,3}$/);

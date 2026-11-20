@@ -20,6 +20,12 @@ export interface CanvasPalette {
   star: string;
   /** Halo de luz (centro opaco) en "r, g, b". */
   glowRgb: string;
+  /** Penumbra de la sala cuando el Pockai duerme con las luces apagadas. */
+  nightTint: string;
+  /** Resalte de lo seleccionado en un dibujo (mueble elegido). */
+  accent: string;
+  /** Velo de color del tema sobre la sala (sin él, la sala se ve tal cual). */
+  ambient?: string;
 }
 
 export interface ThemeManifest {

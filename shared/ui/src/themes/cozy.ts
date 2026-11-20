@@ -9,6 +9,8 @@ const canvas: CanvasPalette = {
   wisp: ['#ffd9a8', '#f4b8a0'],
   star: '#fff4e0',
   glowRgb: '255, 236, 205',
+  nightTint: '#2a160c',
+  accent: '#b0502a',
 };
 
 /** Acogedor: crema, madera y terracota de día; luz de vela de noche. Estilos en styles/themes/cozy.css. */
@@ -21,5 +23,8 @@ export const cozy: ThemeManifest = {
     light: ['#fbf4e8', '#fffaf2', '#c8643b'],
     dark: ['#1a1410', '#241b15', '#f0a77f'],
   },
-  canvas: { light: canvas, dark: canvas },
+  canvas: {
+    light: { ...canvas, ambient: '#ffb070' },
+    dark: { ...canvas, ambient: '#ff9a4a' },
+  },
 };

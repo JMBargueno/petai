@@ -9,6 +9,8 @@ const canvas: CanvasPalette = {
   wisp: ['#9ff3ff', '#c9a6ff'],
   star: '#ffffff',
   glowRgb: '255, 255, 255',
+  nightTint: '#1b1846',
+  accent: '#5c4ade',
 };
 
 /** El aspecto de Pockai de siempre: sus tokens son los de tokens.css, sin fichero de tema propio. */
