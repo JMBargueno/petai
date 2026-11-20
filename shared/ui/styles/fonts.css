@@ -1,0 +1,4 @@
+/* Fuentes de marca de Pockai (guía artística): Bowlby One para titulares e Inter para la interfaz.
+   Los tokens (--font-display, --font-ui) ya las nombran; esto las carga. */
+@import '@fontsource/bowlby-one';
+@import '@fontsource-variable/inter';

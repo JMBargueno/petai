@@ -4,7 +4,7 @@
    * y `change` al soltar, con el valor 0–1.
    */
   import { createEventDispatcher } from 'svelte';
-  import Ico from '../Ico.svelte';
+  import Ico from './Ico.svelte';
 
   export let value = 0;
   export let label = '';

@@ -1,180 +1,91 @@
-:root {
-  color-scheme: dark light;
-  --bg: #14121f;
-  --surface: #1f1c2e;
-  --border: #35304d;
-  --text: #f2f0fa;
-  --muted: #a9a3c2;
-  --accent: #8b7cf6;
-  --accent-text: #14121f;
-  --danger: #ff8a8a;
-  --notice: #f6c66b;
-  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  font-size: 16px;
-  line-height: 1.45;
-}
-
-@media (prefers-color-scheme: light) {
-  :root {
-    --bg: #f6f4fd;
-    --surface: #ffffff;
-    --border: #d9d4ec;
-    --text: #1b1830;
-    --muted: #5f5980;
-    --accent: #5b4bd6;
-    --accent-text: #ffffff;
-    --danger: #b3261e;
-    --notice: #7a5200;
-  }
-}
-
-* {
-  box-sizing: border-box;
-}
-
+/* Lo propio de la app de Android: la página y la disposición de sus pantallas. Los colores, la
+   tipografía y los componentes vienen de @pockai/ui (tokens.css, base.css, kit.css). */
+html,
 body {
   margin: 0;
   background: var(--bg);
-  color: var(--text);
 }
 
 main {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--space-4);
   min-height: 100dvh;
   max-width: 560px;
   margin: 0 auto;
   /* Respeta el recorte de la pantalla y la barra de gestos. */
-  padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
+  padding: max(var(--space-4), env(safe-area-inset-top)) var(--space-4) max(var(--space-4), env(safe-area-inset-bottom));
+  font-size: var(--text-body-lg);
+}
+
+/* Antes de entrar no hay nada más en pantalla: el formulario va centrado. */
+main.centered {
+  justify-content: center;
 }
 
 header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
-header div {
-  display: flex;
-  flex-direction: column;
+header strong {
+  flex: 1;
   min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-h1,
-h2 {
-  margin: 0;
-  line-height: 1.2;
+.wallet {
+  display: flex;
+  gap: var(--space-2);
 }
 
 h1 {
-  font-size: 1.5rem;
-}
-
-h2 {
-  font-size: 1.1rem;
+  margin: 0;
 }
 
 p {
   margin: 0;
 }
 
-.card {
+form {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 16px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-}
-
-.muted {
-  color: var(--muted);
-  font-size: 0.9rem;
+  gap: var(--space-4);
 }
 
 label {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  font-size: 0.9rem;
-  color: var(--muted);
+  gap: var(--space-2);
+  color: var(--ink-muted);
+  font-size: var(--text-label);
 }
 
-input {
-  min-height: 48px;
-  padding: 0 12px;
-  font: inherit;
-  color: var(--text);
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-}
-
-button {
-  /* Objetivo táctil de 48 px como mínimo. */
-  min-height: 48px;
-  padding: 0 16px;
-  font: inherit;
-  font-weight: 600;
-  color: var(--text);
-  background: transparent;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-}
-
-button.primary {
-  color: var(--accent-text);
-  background: var(--accent);
-  border-color: var(--accent);
-}
-
-button:disabled {
-  opacity: 0.55;
-}
-
-input:focus-visible,
-button:focus-visible {
-  outline: 3px solid var(--accent);
-  outline-offset: 2px;
+.vitals {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
 }
 
 .actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
-.actions button {
+.actions > * {
   flex: 1 1 140px;
 }
 
-.vital {
-  display: grid;
-  grid-template-columns: 5.5rem 1fr 3rem;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.9rem;
+/* En el móvil se toca con el dedo: los controles del kit suben a 48 px de alto. */
+.btn,
+.input {
+  min-height: 48px;
 }
 
-.vital .number {
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-}
-
-progress {
-  width: 100%;
-  height: 10px;
-  accent-color: var(--accent);
-}
-
-.notice {
-  color: var(--notice);
-  font-size: 0.9rem;
-}
-
-.error {
-  color: var(--danger);
+.input {
+  font-size: var(--text-body-lg);
 }

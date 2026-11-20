@@ -21,6 +21,7 @@
     "@pockai/mind": "workspace:*",
     "@pockai/minigames": "workspace:*",
     "@pockai/scene": "workspace:*",
+    "@pockai/ui": "workspace:*",
     "@tauri-apps/api": "^2.0.0",
     "@tauri-apps/plugin-autostart": "^2.7.0",
     "@tauri-apps/plugin-fs": "^2.0.0",

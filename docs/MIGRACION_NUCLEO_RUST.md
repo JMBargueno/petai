@@ -76,7 +76,7 @@ se desvía del plan, se anota en «Desviaciones» al final.
 - ✅ 4.1 `main.rs` → `lib.rs` con `mobile_entry_point`; lo de escritorio en `desktop.rs` bajo `cfg(desktop)` y un shell mínimo en `mobile.rs`
 - 🟡 4.2 `tauri android init` hecho y `gen/android` versionado; la app compila, se instala y funciona en el emulador. Falta `tauri ios init` (necesita un Mac)
 - 🟡 4.3 `tauri.android.conf.json` y capacidades por plataforma (`capabilities/mobile.json`) hechos; falta `tauri.ios.conf.json`
-- ⬜ 4.4 `shared/ui` (`@pockai/ui`): tokens y componentes comunes
+- 🟡 4.4 `shared/ui` (`@pockai/ui`): tokens, fuentes, estilos y los 20 componentes del kit del escritorio, ya usados por el escritorio y por Android. Faltan las piezas de dominio (se sacan según se porte cada pantalla)
 - 🟡 4.5 `apps/android`: primera UI Svelte (entrar, mascota, cuidar, alimentar, eclosionar, salir). Probada sobre el núcleo alojándola en el shell de escritorio; no en un dispositivo
 - ⬜ 4.6 `apps/ios`: UI Svelte
 - 🟡 4.7 Sesión en móvil: iOS usa el Keychain (crate `keyring`); Android, un fichero privado de la app (`FileStore`). Falta cifrarlo con el Keystore en un plugin nativo
@@ -254,3 +254,24 @@ Lo que hizo falta para llegar aquí:
   (`GRADLE_OPTS` y `JAVA_TOOL_OPTIONS`), y que exista `C:/t`.
 - En el emulador de API 37 las apps no llegan a `10.0.2.2`. Funciona con `adb reverse tcp:3000
   tcp:3000` y la app compilada con `VITE_API_URL=http://127.0.0.1:3000`.
+
+## @pockai/ui: biblioteca de componentes compartida (2026-11-20)
+
+`shared/ui` reúne lo que es solo presentación y sirve a las tres UIs:
+
+- **Estilos**: `fonts.css` (Bowlby One e Inter), `tokens.css` (colores, espaciados, radios, tipografía),
+  `base.css` (botones, tarjetas, campos) y `kit.css`. Cada app los carga una vez y añade su hoja
+  propia con lo suyo (la ventana transparente del escritorio; la página y los 48 px táctiles en móvil).
+- **Componentes**: los 20 del kit que tenía el escritorio (`Button`, `Card`, `Modal`, `ProgressBar`,
+  `CurrencyPill`, `Notice`…), más `Ico` y `focusTrap`. Se movieron con `git mv`, sin reescribirlos.
+- **Sin sonido dentro**: `Modal` y `CurrencyPill` sonaban; ahora avisan (`onUiFeedback`) y cada app
+  decide. El escritorio les pone sus efectos en `main.ts`.
+
+Reglas para lo que entre a partir de ahora: datos por props, avisos por eventos, nada de núcleo,
+backend ni plataforma. Navegación y disposición de pantallas se quedan en cada app.
+
+El escritorio conserva sus rutas de siempre (`components/ui`, `components/Ico.svelte`,
+`lib/ui/focusTrap`) como reexportaciones del paquete, para no tocar sus ~40 componentes.
+
+Verificado: 438 tests y compilación del escritorio; el escritorio en modo demo se ve igual que antes;
+la app de Android en el emulador con el kit (inicio de sesión, mascota, alimentar, salir).

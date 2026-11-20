@@ -1,6 +1,6 @@
 <script lang="ts">
   /** Cabecera de una funcionalidad (juego, raid, temporada…): icono en baldosa + título display + subtítulo. */
-  import Ico from '../Ico.svelte';
+  import Ico from './Ico.svelte';
 
   export let title: string;
   export let sub = '';

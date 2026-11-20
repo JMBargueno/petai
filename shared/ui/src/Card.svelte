@@ -3,7 +3,7 @@
    * Tarjeta base del panel. `pop` = sombra sticker, `flat` = borde suave sin sombra,
    * `hero` = degradado con el color de la sección (--view-tint).
    */
-  import Ico from '../Ico.svelte';
+  import Ico from './Ico.svelte';
   import SceneBackdrop from './SceneBackdrop.svelte';
 
   export let variant: 'default' | 'pop' | 'flat' | 'hero' = 'default';

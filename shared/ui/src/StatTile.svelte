@@ -1,6 +1,6 @@
 <script lang="ts">
   /** Cifra destacada con etiqueta. Se agrupan dentro de un <div class="ui-stats">. */
-  import Ico from '../Ico.svelte';
+  import Ico from './Ico.svelte';
 
   export let value: string | number;
   export let label: string;

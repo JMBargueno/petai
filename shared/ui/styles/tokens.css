@@ -1,5 +1,6 @@
 /*
- * Tokens del sistema de diseño de Pockai (v2), copia de web/src/styles/tokens.css sin `@theme`.
+ * Tokens del sistema de diseño de Pockai (v2), compartidos por las UIs de escritorio, Android e iOS.
+ * Es una copia de web/src/styles/tokens.css sin `@theme`.
  * Guía: docs/GUIA_ARTISTICA.md. Si cambias un valor, cámbialo también en la web.
  */
 :root {

@@ -3,8 +3,8 @@
    * Cantidad de monedas o gemas con su icono. `plain` sin borde (precios dentro de texto o botones).
    * `sound`: suena al subir la cantidad (solo el saldo de la cabecera, para no sonar en cada precio).
    */
-  import Ico from '../Ico.svelte';
-  import { sfx } from '../../lib/audio';
+  import Ico from './Ico.svelte';
+  import { emitUiFeedback } from './feedback';
 
   export let kind: 'coins' | 'gems' = 'coins';
   export let amount: number | string;
@@ -15,7 +15,7 @@
   $: {
     const n = typeof amount === 'number' ? amount : Number(amount);
     if (sound && Number.isFinite(n)) {
-      if (last !== null && n > last) sfx(kind === 'coins' ? 'ui.coin_gain' : 'ui.gem_gain');
+      if (last !== null && n > last) emitUiFeedback(kind === 'coins' ? 'coinGain' : 'gemGain');
       last = n;
     }
   }

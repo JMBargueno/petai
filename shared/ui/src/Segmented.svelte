@@ -6,7 +6,7 @@
    * Admite `bind:value` y emite `change`.
    */
   import { createEventDispatcher, onMount, tick } from 'svelte';
-  import Ico from '../Ico.svelte';
+  import Ico from './Ico.svelte';
 
   type Option = { value: string; label: string; icon?: string; badge?: number | string };
   export let options: Option[] = [];

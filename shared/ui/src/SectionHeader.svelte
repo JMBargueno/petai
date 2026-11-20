@@ -1,6 +1,6 @@
 <script lang="ts">
   /** Cabecera de sección: título en versalitas + contador opcional + acciones (slot `end`) o botón de recargar. */
-  import Ico from '../Ico.svelte';
+  import Ico from './Ico.svelte';
 
   export let title: string;
   export let icon: string | null = null;
