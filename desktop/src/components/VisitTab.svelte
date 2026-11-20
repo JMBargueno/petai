@@ -5,7 +5,7 @@
    * portal, las escenas (casa del amigo, su sala y el diálogo de la visita) y la ventana de perfil.
    */
   import { onMount, createEventDispatcher } from 'svelte';
-  import { VisitsView } from '@pockai/ui';
+  import { VisitDialog, VisitsView } from '@pockai/ui';
   import { acceptedFriends } from '@pockai/ui/social';
   import { api, type CoopFriend, type CoopVisitLog, type CoopVisitResult } from '../lib/api';
   import { activeVisit } from '../lib/activeVisit';
@@ -13,7 +13,6 @@
   import { friendlyError } from '../lib/ui/errors';
   import UserProfileModal from '../features/profile/UserProfileModal.svelte';
   import HomeScene from './HomeScene.svelte';
-  import VisitDialog from './VisitDialog.svelte';
   import FriendRoomView from './FriendRoomView.svelte';
   import { clipCueOf, type ClipCue } from '../lib/visitDialog';
   import { PawPrint } from 'lucide-svelte';
@@ -133,7 +132,7 @@
   <svelte:fragment slot="room" let:friend>
     {#key friend.otherUserId}
       <FriendRoomView ownerId={friend.otherUserId} ownerName={friend.otherDisplayName} clipCue={friendClip} />
-      <VisitDialog ownerId={friend.otherUserId} on:reply={(e) => (friendClip = clipCueOf(e.detail.behavior))} />
+      <VisitDialog ownerId={friend.otherUserId} interact={(id, choice, turn) => api.visitInteract(id, choice, turn)} errorText={friendlyError} on:reply={(e) => (friendClip = clipCueOf(e.detail.behavior))} />
     {/key}
   </svelte:fragment>
 </VisitsView>

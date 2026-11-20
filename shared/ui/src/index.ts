@@ -78,6 +78,7 @@ export { default as SocialAvatar } from './SocialAvatar.svelte';
 export { default as StorySceneView } from './StorySceneView.svelte';
 export { default as TournamentView } from './TournamentView.svelte';
 export { default as TrainingView } from './TrainingView.svelte';
+export { default as VisitDialog } from './VisitDialog.svelte';
 export { default as VisitsView } from './VisitsView.svelte';
 export { default as WardrobeView } from './WardrobeView.svelte';
 export * from './maps';

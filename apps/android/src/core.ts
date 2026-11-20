@@ -6,7 +6,7 @@
  */
 import { get, writable } from 'svelte/store';
 import { celebrateReward, type AuthApi, type HandleCheck, type RewardReceived } from '@pockai/ui';
-import { clearClan, clearVisitors, connectSocialFeed } from '@pockai/ui/social';
+import { clearClan, clearVisitors, connectSocialFeed, setVisitors, type HabitatVisitor } from '@pockai/ui/social';
 import {
   hasCore,
   logout as coreLogout,
@@ -76,6 +76,13 @@ async function load(): Promise<void> {
   if (!outcome.session) phase.set('signedOut');
   else if (outcome.lock) phase.set('locked');
   else phase.set(get(state).user ? 'ready' : 'signedOut');
+  // Los pockais que ya están de visita en tu hábitat; los que llegan o se van después avisan por
+  // tiempo real (feed social).
+  if (get(phase) === 'ready') {
+    query<{ visitors?: HabitatVisitor[] } | null>({ type: 'getHabitatVisitors' })
+      .then((r) => setVisitors(r?.visitors ?? []))
+      .catch(() => {});
+  }
 }
 
 /** Lo que se le enseña al jugador cuando algo falla. */

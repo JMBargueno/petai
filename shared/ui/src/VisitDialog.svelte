@@ -1,16 +1,19 @@
 <script lang="ts">
   /**
    * Hablar con el Pockai del amigo al que estás visitando (spec 37 §6.2). Por menú: el servidor
-   * decide qué contesta y qué opciones hay; aquí solo se muestran y se envía la elegida.
+   * decide qué contesta y qué opciones hay; aquí solo se muestran y se envía la elegida. Cómo se
+   * habla con el servidor lo pone cada app (`interact`: el núcleo en Android, la API en el escritorio).
    */
   import { createEventDispatcher, onMount } from 'svelte';
-  import { api, type VisitInteraction } from '../lib/api';
-  import { friendlyError } from '../lib/ui/errors';
-  import { visitorStageLabel, optionIcon } from '../lib/visitDialog';
   import Ico from './Ico.svelte';
+  import type { VisitInteraction } from './social/types';
+  import { optionIcon, visitorStageLabel } from './social/visitDialog';
 
   /** Amigo al que se visita (su userId). */
   export let ownerId: string;
+  /** Empieza la charla (sin `choice`) o envía la opción elegida con el turno de la respuesta anterior. */
+  export let interact: (ownerId: string, choice?: number, turn?: number) => Promise<VisitInteraction>;
+  export let errorText: (error: unknown, fallback: string) => string;
 
   /** `reply`: cada respuesta del Pockai, para que la sala del amigo la represente. */
   const dispatch = createEventDispatcher<{ reply: VisitInteraction }>();
@@ -25,9 +28,9 @@
     loading = true;
     error = '';
     try {
-      reply = await api.visitInteract(ownerId);
-    } catch (e: any) {
-      error = friendlyError(e, 'No se pudo hablar con el Pockai.');
+      reply = await interact(ownerId);
+    } catch (e) {
+      error = errorText(e, 'No se pudo hablar con el Pockai.');
     } finally {
       loading = false;
     }
@@ -39,10 +42,10 @@
     error = '';
     try {
       // El turno evita que un doble clic o un reintento repita el efecto (p. ej. gastar dos premios)
-      reply = await api.visitInteract(ownerId, index, reply.turn);
+      reply = await interact(ownerId, index, reply.turn);
       dispatch('reply', reply);
-    } catch (e: any) {
-      error = friendlyError(e, 'No se pudo enviar tu elección.');
+    } catch (e) {
+      error = errorText(e, 'No se pudo enviar tu elección.');
     } finally {
       sending = -1;
     }
