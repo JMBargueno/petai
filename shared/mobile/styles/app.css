@@ -204,16 +204,79 @@ nav.tabbar button {
      vive esa receta para todas las láminas. Aquí solo dónde se queda y cuánto ocupa. */
 }
 
-/* Cada destino, en su propia píldora dentro de la lámina. */
+/* En iOS la barra es solo iconos: sin los textos, la lámina queda más estrecha y el icono respira.
+   El nombre de cada destino no se pierde, va en el `aria-label` del botón (ver MobileApp.svelte);
+   sin él, al ocultar el texto el botón se quedaría sin nombre para un lector de pantalla. */
+:root[data-platform='ios'] nav.tabbar .tab-label {
+  display: none;
+}
 :root[data-platform='ios'] nav.tabbar button {
-  gap: 2px;
+  /* Sin padding lateral: así cada botón ocupa exactamente 1/n de la barra y la lente, que se
+     coloca por fracciones, cae justo encima. */
+  padding: var(--space-2) 0;
   border-radius: var(--radius-pills);
-  padding: var(--space-1) var(--space-2);
-  font-size: 10px;
-  font-weight: 500;
+}
+
+/* El icono activo se agranda: es lo que se ve a través de la lente. */
+:root[data-platform='ios'] nav.tabbar button .tab-icon {
+  position: relative;
+  z-index: 1;
+  transition: scale var(--dur-2) var(--ease-standard);
 }
 :root[data-platform='ios'] nav.tabbar button.active {
   color: var(--accent-ink);
+}
+:root[data-platform='ios'] nav.tabbar button.active .tab-icon {
+  scale: 1.22;
+}
+
+/* La lente: una gota de vidrio sobre el destino activo, que se desliza hasta el nuevo al cambiar.
+   Va delante del icono (se mira *a través* de ella), así que no puede comerse los toques.
+
+   Se coloca por fracciones de la barra: `--tab-count` y `--tab-index` los pone el shell. El
+   `scale` horizontal la estrecha dentro de su hueco sin tocar el `translate`, que usa el ancho
+   propio del elemento: las propiedades individuales se aplican en orden translate → rotate → scale,
+   así que una no arrastra a la otra.
+
+   Ojo con la caja de referencia: al estar posicionada en absoluto, sus porcentajes y su `inset` se
+   miden contra la **caja de relleno** de la barra, mientras que los botones (con `flex: 1`) se
+   reparten la **caja de contenido**. Hay que descontar el relleno lateral a mano, o la lente queda
+   corrida y con huecos más anchos que los botones. */
+:root[data-platform='ios'] nav.tabbar::after {
+  content: '';
+  position: absolute;
+  z-index: 2;
+  inset-block: var(--space-1);
+  inset-inline-start: var(--space-2);
+  width: calc((100% - 2 * var(--space-2)) / var(--tab-count));
+  translate: calc(var(--tab-index) * 100%);
+  scale: 0.62 1;
+  border-radius: var(--radius-pills);
+  corner-shape: inherit;
+  background: var(--glass-tint);
+  backdrop-filter: saturate(1.5) brightness(1.08);
+  -webkit-backdrop-filter: saturate(1.5) brightness(1.08);
+  /* Canto iluminado arriba y sombra interior abajo: es lo que la lee como una gota convexa y no
+     como una pastilla plana. */
+  box-shadow:
+    inset 0 0 0 0.5px var(--glass-edge),
+    inset 0 1px 0 var(--glass-specular),
+    inset 0 -3px 6px -3px var(--glass-edge);
+  pointer-events: none;
+  transition: translate var(--dur-2) var(--ease-standard);
+}
+
+/* Cuenta no está en la barra: sin destino activo, la lente se desvanece donde estaba. */
+:root[data-platform='ios'] nav.tabbar.no-lens::after {
+  opacity: 0;
+  transition: opacity var(--dur-1), translate var(--dur-2) var(--ease-standard);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root[data-platform='ios'] nav.tabbar::after,
+  :root[data-platform='ios'] nav.tabbar button .tab-icon {
+    transition: none;
+  }
 }
 :root[data-platform='ios'] nav.tabbar button:active {
   opacity: var(--press-opacity);

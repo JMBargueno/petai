@@ -66,6 +66,8 @@
   let now = $state(Date.now());
 
   const pet = $derived(activePet($core));
+  /** Qué pestaña de la barra está activa, o -1 si la de ahora no sale en ella (Cuenta). */
+  const activeTabIndex = $derived(config.tabs.findIndex((t) => t.id === tab));
 
   /**
    * Iniciativa (spec 41): la mascota habla por su cuenta. Qué dice y cuándo lo decide el servidor;
@@ -333,11 +335,27 @@
       {/if}
     </div>
 
-    <nav class="tabbar" aria-label="Secciones">
+    <!--
+      `--tab-count` y `--tab-index` los usa iOS para deslizar la lente hasta la pestaña activa. Con
+      `-1` (la pestaña Cuenta, que no está en la barra) la lente se esconde.
+      `aria-label` en cada botón: en iOS el texto no se ve, y sin él el botón se quedaría sin nombre.
+    -->
+    <nav
+      class="tabbar"
+      class:no-lens={activeTabIndex < 0}
+      aria-label="Secciones"
+      style="--tab-count: {config.tabs.length}; --tab-index: {activeTabIndex};"
+    >
       {#each config.tabs as item (item.id)}
-        <button type="button" class:active={tab === item.id} aria-current={tab === item.id ? 'page' : undefined} onclick={() => (tab = item.id)}>
+        <button
+          type="button"
+          class:active={tab === item.id}
+          aria-current={tab === item.id ? 'page' : undefined}
+          aria-label={item.label}
+          onclick={() => (tab = item.id)}
+        >
           <span class="tab-icon"><Ico n={item.icon} size={22} /></span>
-          <span>{item.label}</span>
+          <span class="tab-label">{item.label}</span>
         </button>
       {/each}
     </nav>
